@@ -23,7 +23,34 @@ new #[Layout('layouts.app')] class extends Component
     public $collectionID = '';
     
     #[Url]
-    public $tag = '';
+    public array $tags = [];
+    
+    public $tagInput = '';
+
+    #[Url]
+    public string $filterOwned = '';
+    
+    #[Url]
+    public string $filterFav = '';
+    
+    #[Url]
+    public string $filterWish = '';
+
+    public function addTag()
+    {
+        $input = strtolower(trim($this->tagInput));
+        if ($input && !in_array($input, $this->tags)) {
+            $this->tags[] = $input;
+            $this->resetPage();
+        }
+        $this->tagInput = '';
+    }
+
+    public function removeTag($tag)
+    {
+        $this->tags = array_values(array_diff($this->tags, [$tag]));
+        $this->resetPage();
+    }
     
     #[Url]
     public string $sortBy = 'rarity';
@@ -39,7 +66,7 @@ new #[Layout('layouts.app')] class extends Component
 
     public function updated($property)
     {
-        if (in_array($property, ['search', 'rarity', 'collectionID', 'tag', 'sortBy', 'sortDesc', 'owner', 'hidePromos'])) {
+        if (in_array($property, ['search', 'rarity', 'collectionID', 'sortBy', 'sortDesc', 'owner', 'hidePromos', 'filterOwned', 'filterFav', 'filterWish'])) {
             $this->resetPage();
         }
     }
@@ -86,16 +113,54 @@ new #[Layout('layouts.app')] class extends Component
             $query->where('collectionID', $this->collectionID);
         }
 
-        if ($this->tag) {
-            $tagCardIDs = \App\Models\Tag::where('tagName', 'like', '%' . $this->tag . '%')
-                ->where('status', 'clear')
-                ->pluck('cardID')
-                ->toArray();
-                
-            if (empty($tagCardIDs)) {
+        if (!empty($this->tags)) {
+            $matchedCardIDs = null;
+            foreach ($this->tags as $t) {
+                $ids = \App\Models\Tag::where('tagName', 'like', '%' . $t . '%')
+                    ->where('status', 'clear')
+                    ->pluck('cardID')
+                    ->toArray();
+                    
+                if ($matchedCardIDs === null) {
+                    $matchedCardIDs = $ids;
+                } else {
+                    $matchedCardIDs = array_intersect($matchedCardIDs, $ids);
+                }
+            }
+            if (empty($matchedCardIDs)) {
                 $query->where('cardID', -1);
             } else {
-                $query->whereIn('cardID', $tagCardIDs);
+                $query->whereIn('cardID', $matchedCardIDs);
+            }
+        }
+        
+        if (auth()->check()) {
+            if ($this->filterOwned !== '' || $this->filterFav !== '') {
+                $userCardsQuery = UserCard::where('userID', auth()->user()->userID);
+                $myUserCards = $userCardsQuery->get();
+                
+                if ($this->filterOwned === 'only') {
+                    $query->whereIn('cardID', $myUserCards->pluck('cardID'));
+                } elseif ($this->filterOwned === 'exclude') {
+                    $query->whereNotIn('cardID', $myUserCards->pluck('cardID'));
+                }
+
+                if ($this->filterFav === 'only') {
+                    $query->whereIn('cardID', $myUserCards->where('fav', true)->pluck('cardID'));
+                } elseif ($this->filterFav === 'exclude') {
+                    $query->whereNotIn('cardID', $myUserCards->where('fav', true)->pluck('cardID'));
+                }
+            }
+
+            if ($this->filterWish !== '') {
+                $myWishlists = \App\Models\UserWishlist::where('userID', auth()->user()->userID)->get();
+                $wishCardIDs = $myWishlists->pluck('cardID')->map(fn($id) => (int)$id)->toArray();
+                
+                if ($this->filterWish === 'only') {
+                    $query->whereIn('cardID', $wishCardIDs);
+                } elseif ($this->filterWish === 'exclude') {
+                    $query->whereNotIn('cardID', $wishCardIDs);
+                }
             }
         }
 
@@ -147,44 +212,8 @@ new #[Layout('layouts.app')] class extends Component
             @endif
         </div>
         
-        <!-- Filters -->
-        <div class="glass-panel" style="padding: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-            <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search name or ID..." class="input-glass">
-            
-            <input type="text" wire:model.live.debounce.300ms="tag" placeholder="Search tags..." class="input-glass">
-            
-            <select wire:model.live="rarity" class="input-glass">
-                <option value="">All Rarities</option>
-                <option value="1">1 Star</option>
-                <option value="2">2 Stars</option>
-                <option value="3">3 Stars</option>
-                <option value="4">4 Stars</option>
-                <option value="5">5 Stars</option>
-                <option value="6">6 Stars (Promo)</option>
-            </select>
-            
-            <select wire:model.live="collectionID" class="input-glass" style="max-width: 200px;">
-                <option value="">All Collections</option>
-                @foreach($collections as $col)
-                    <option value="{{ $col['collectionID'] }}">{{ $col['name'] }}</option>
-                @endforeach
-            </select>
-
-            <select wire:model.live="sortBy" class="input-glass">
-                <option value="cardID">Sort by ID</option>
-                <option value="rarity">Sort by Rarity</option>
-                <option value="dateAdded">Sort by Date</option>
-                <option value="eval">Sort by Eval</option>
-            </select>
-            
-            <button wire:click="$toggle('sortDesc')" class="input-glass" style="cursor: pointer; padding: 0.5rem 1rem; user-select: none;">
-                {{ $sortDesc ? 'Descending ⬇️' : 'Ascending ⬆️' }}
-            </button>
-
-            <button wire:click="$toggle('hidePromos')" class="input-glass" style="cursor: pointer; padding: 0.5rem 1rem; user-select: none; background: {{ $hidePromos ? 'var(--accent-solid)' : 'var(--glass-bg)' }}; border-color: {{ $hidePromos ? 'var(--accent-solid)' : 'var(--glass-border)' }}; transition: all 0.2s;">
-                {{ $hidePromos ? '🙈 Promos Hidden' : '👁️ Promos Shown' }}
-            </button>
-        </div>
+        <!-- Filters Component -->
+        <x-card-filters :collections="$collections" :tags="$tags" :sortDesc="$sortDesc" :hidePromos="$hidePromos" />
     </div>
     
     <x-card-grid :cards="$cards" :collections="$collections" :userOwned="$userOwned" :userFavs="$userFavs" :userWishlists="$userWishlists" />
