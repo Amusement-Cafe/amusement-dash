@@ -5,6 +5,7 @@ use Livewire\Attributes\Url;
 use App\Models\User;
 use App\Models\Card;
 use App\Models\BotCollection;
+use App\Models\UserWishlist;
 use Livewire\Attributes\Layout;
 
 new #[Layout('layouts.app')] class extends Component
@@ -40,10 +41,24 @@ new #[Layout('layouts.app')] class extends Component
             }
         }
 
+        $wishlistCardIDs = UserWishlist::where('userID', $userIdToFetch)->pluck('cardID')->toArray();
+        $wishlistCardIDs = array_map('intval', $wishlistCardIDs);
+        
+        $wishlistCards = [];
+        $wishlistCollections = [];
+        
+        if (!empty($wishlistCardIDs)) {
+            $wishlistCards = Card::whereIn('cardID', $wishlistCardIDs)->get();
+            $collectionIDs = $wishlistCards->pluck('collectionID')->unique()->toArray();
+            $wishlistCollections = BotCollection::whereIn('collectionID', $collectionIDs)->get()->keyBy('collectionID')->toArray();
+        }
+
         return [
             'userProfile' => $userProfile,
             'favCard' => $favCard,
             'favCollection' => $favCollection,
+            'wishlistCards' => $wishlistCards,
+            'wishlistCollections' => $wishlistCollections,
         ];
     }
 };
@@ -61,7 +76,39 @@ new #[Layout('layouts.app')] class extends Component
             $color = $userProfile->preferences['profile']['color'] ?? '16756480';
             // Convert discord int color to hex
             $hexColor = '#' . str_pad(dechex($color), 6, "0", STR_PAD_LEFT);
+            
+            $xp = $userProfile->xp ?? 0;
+            $level = floor(sqrt($xp * 2));
+            
+            $levelColor = match(true) {
+                $level >= 100 => '#fbbf24', // Gold
+                $level >= 50 => '#a855f7', // Purple
+                $level >= 25 => '#3b82f6', // Blue
+                $level >= 10 => '#22c55e', // Green
+                default => '#9ca3af' // Gray
+            };
+
+            $avatarIndex = is_numeric($userProfile->userID) ? (substr($userProfile->userID, -1) % 6) : 0;
+            $avatarUrl = "https://cdn.discordapp.com/embed/avatars/{$avatarIndex}.png";
         @endphp
+
+        <style>
+            @keyframes rainbow-glow {
+                0% { box-shadow: 0 0 20px 5px rgba(255, 0, 0, 0.5); }
+                16% { box-shadow: 0 0 20px 5px rgba(255, 127, 0, 0.5); }
+                33% { box-shadow: 0 0 20px 5px rgba(255, 255, 0, 0.5); }
+                50% { box-shadow: 0 0 20px 5px rgba(0, 255, 0, 0.5); }
+                66% { box-shadow: 0 0 20px 5px rgba(0, 0, 255, 0.5); }
+                83% { box-shadow: 0 0 20px 5px rgba(139, 0, 255, 0.5); }
+                100% { box-shadow: 0 0 20px 5px rgba(255, 0, 0, 0.5); }
+            }
+            .rainbow-panel {
+                animation: rainbow-glow 4s linear infinite;
+                background: var(--glass-bg);
+                border-radius: 12px;
+                border: none;
+            }
+        </style>
 
         <!-- Header Profile Banner -->
         <div class="glass-panel" style="position: relative; padding: 3rem; margin-bottom: 2rem; overflow: hidden; border-top: 4px solid {{ $hexColor }};">
@@ -69,6 +116,14 @@ new #[Layout('layouts.app')] class extends Component
             <div style="position: absolute; top: -50px; left: 50%; transform: translateX(-50%); width: 200px; height: 100px; background: {{ $hexColor }}; filter: blur(100px); opacity: 0.3; pointer-events: none;"></div>
             
             <div style="display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 10;">
+                
+                <div style="position: relative; margin-bottom: 1rem;">
+                    <img src="{{ $avatarUrl }}" alt="Avatar" style="width: 120px; height: 120px; border-radius: 50%; border: 4px solid {{ $levelColor }}; object-fit: cover;">
+                    <div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); background: {{ $levelColor }}; color: white; padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 10px rgba(0,0,0,0.5);">
+                        LVL {{ $level }}
+                    </div>
+                </div>
+
                 <h1 style="font-size: 3rem; margin: 0; display: flex; align-items: center; gap: 1rem;">
                     {{ $userProfile->username }}
                 </h1>
@@ -85,9 +140,9 @@ new #[Layout('layouts.app')] class extends Component
             </div>
         </div>
 
-        <div style="display: flex; flex-wrap: wrap; gap: 2rem;">
+        <div style="display: flex; flex-wrap: wrap; gap: 2rem; flex-direction: row-reverse;">
             
-            <!-- Left Column: Stats & Inventory -->
+            <!-- Right Column: Stats & Inventory (Now visually right) -->
             <div style="flex: 2; min-width: 300px; display: flex; flex-direction: column; gap: 2rem;">
                 
                 <!-- Balances -->
@@ -160,9 +215,9 @@ new #[Layout('layouts.app')] class extends Component
 
             </div>
 
-            <!-- Right Column: Fav Card -->
+            <!-- Left Column: Fav Card (Now visually left) -->
             <div style="flex: 1; min-width: 250px; display: flex; flex-direction: column;">
-                <div class="glass-panel" style="padding: 2rem; flex: 1; display: flex; flex-direction: column; align-items: center;">
+                <div class="rainbow-panel" style="padding: 2rem; flex: 1; display: flex; flex-direction: column; align-items: center;">
                     <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; width: 100%; text-align: left; display: flex; align-items: center; gap: 0.5rem;">
                         <span>❤️</span> Favorite Card
                     </h2>
@@ -187,5 +242,20 @@ new #[Layout('layouts.app')] class extends Component
             </div>
 
         </div>
+
+        @if(count($wishlistCards) > 0)
+            <div class="glass-panel" style="padding: 2rem; margin-top: 2rem;">
+                <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>✨</span> Wishlist
+                </h2>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem;">
+                    @foreach($wishlistCards as $wCard)
+                        @php $wCol = $wishlistCollections[$wCard->collectionID] ?? null; @endphp
+                        <x-card-viewer :card="$wCard" :collectionName="$wCol['name'] ?? null" />
+                    @endforeach
+                </div>
+            </div>
+        @endif
     @endif
 </div>
