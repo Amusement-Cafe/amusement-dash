@@ -44,8 +44,28 @@ new #[Layout('layouts.app')] class extends Component
             
             $dashboardData['daily'] = [
                 'canClaim' => $canClaimDaily,
-                'nextTime' => $nextDailyTime
+                'nextTime' => $nextDailyTime,
+                'streak' => $user->streaks['daily']['count'] ?? 0
             ];
+            
+            $dashboardData['voteNotify'] = $user->preferences['notify']['vote'] ?? false;
+
+            // Calculate total stars
+            $userCardsAll = \App\Models\UserCard::where('userID', $user->userID)->get(['cardID', 'amount']);
+            $allCardIDs = $userCardsAll->pluck('cardID')->unique()->toArray();
+            $allCards = collect();
+            foreach (array_chunk($allCardIDs, 500) as $chunk) {
+                $allCards = $allCards->merge(\App\Models\Card::whereIn('cardID', $chunk)->get(['cardID', 'rarity']));
+            }
+            $allCards = $allCards->keyBy('cardID');
+            $totalStars = 0;
+            foreach ($userCardsAll as $uc) {
+                $c = $allCards->get($uc->cardID);
+                if ($c) {
+                    $totalStars += ($c->rarity ?? 1) * ($uc->amount ?? 1);
+                }
+            }
+            $dashboardData['totalStars'] = $totalStars;
 
             $hero = null;
             if ($user->hero) {
@@ -140,6 +160,9 @@ new #[Layout('layouts.app')] class extends Component
                     <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.2rem; font-weight: bold; background: var(--glass-bg); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
                         🧪 {{ number_format(auth()->user()->vials ?? 0) }}
                     </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.2rem; font-weight: bold; background: var(--glass-bg); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+                        <i class="ph-fill ph-star" style="color: #fbbf24;"></i> {{ number_format($data['totalStars'] ?? 0) }}
+                    </div>
                 </div>
             </div>
 
@@ -160,7 +183,7 @@ new #[Layout('layouts.app')] class extends Component
             <div class="glass-panel" style="padding: 1.5rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid {{ $data['daily']['canClaim'] ? '#10b981' : '#f59e0b' }};">
                 <i class="ph-fill ph-calendar-check" style="font-size: 3.5rem; color: {{ $data['daily']['canClaim'] ? '#10b981' : '#f59e0b' }};"></i>
                 <div>
-                    <h3 style="margin: 0 0 0.2rem 0; font-size: 1.2rem;">Daily Claim</h3>
+                    <h3 style="margin: 0 0 0.2rem 0; font-size: 1.2rem;">Daily Claim <span style="font-size: 0.9rem; color: #ef4444; margin-left: 0.5rem;"><i class="ph-fill ph-fire"></i> {{ $data['daily']['streak'] }}</span></h3>
                     <p style="margin: 0; color: var(--text-secondary); font-size: 0.95rem;">
                         {{ $data['daily']['canClaim'] ? 'Your daily rewards are ready!' : 'Next daily available ' . $data['daily']['nextTime'] }}
                     </p>
@@ -188,6 +211,33 @@ new #[Layout('layouts.app')] class extends Component
                     </p>
                 </div>
             </a>
+
+            <!-- Voting -->
+            <div class="glass-panel" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; border-left: 4px solid #f43f5e;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <i class="ph-fill ph-check-square-offset" style="font-size: 3.5rem; color: #f43f5e;"></i>
+                    <div>
+                        <h3 style="margin: 0 0 0.2rem 0; font-size: 1.2rem;">Vote Rewards</h3>
+                        <p style="margin: 0; color: var(--text-secondary); font-size: 0.85rem;">
+                            @if($data['voteNotify'])
+                                <span style="color: #10b981;"><i class="ph-bold ph-bell-ringing"></i> Notifications Enabled</span>
+                            @else
+                                <span style="color: #f59e0b;"><i class="ph-bold ph-bell-slash"></i> Notifications Disabled</span>
+                            @endif
+                        </p>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+                    <a href="https://top.gg/bot/340988108222758934/vote" target="_blank" style="background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 8px; color: white; text-decoration: none; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s; border: 1px solid rgba(255,255,255,0.1);" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                        <span style="font-weight: bold; display: flex; align-items: center; gap: 0.5rem;"><img src="https://top.gg/favicon.ico" style="width: 16px; height: 16px;" onerror="this.style.display='none'"> Top.gg</span>
+                        <span style="color: #60a5fa; font-size: 0.9rem;">Free Cards</span>
+                    </a>
+                    <a href="https://discordbotlist.com/bots/amusement-club" target="_blank" style="background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 8px; color: white; text-decoration: none; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s; border: 1px solid rgba(255,255,255,0.1);" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                        <span style="font-weight: bold; display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-discord-logo"></i> DBL</span>
+                        <span style="color: #ef4444; font-size: 0.9rem; font-weight: bold;">Free 🍅</span>
+                    </a>
+                </div>
+            </div>
         </div>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
@@ -234,17 +284,28 @@ new #[Layout('layouts.app')] class extends Component
                             @foreach($data['plots'] as $plot)
                                 @php
                                     $lemons = $plot->building['storedLemons'] ?? 0;
+                                    $bID = strtolower($plot->building['buildingID'] ?? '');
+                                    $bIcon = match(true) {
+                                        str_contains($bID, 'farm') || str_contains($bID, 'lemon') => 'ph-plant',
+                                        str_contains($bID, 'mine') => 'ph-pickaxe',
+                                        str_contains($bID, 'bank') || str_contains($bID, 'vault') => 'ph-bank',
+                                        str_contains($bID, 'factory') => 'ph-factory',
+                                        str_contains($bID, 'shop') || str_contains($bID, 'store') => 'ph-storefront',
+                                        default => 'ph-house'
+                                    };
                                 @endphp
                                 <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                                    <div>
-                                        <div style="font-weight: bold;">Plot #{{ $loop->iteration }}</div>
-                                        <div style="font-size: 0.9rem; color: var(--text-secondary);">LVL {{ $plot->building['level'] ?? 1 }} {{ $plot->building['buildingID'] ?? 'Building' }}</div>
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                                            <i class="ph-fill {{ $bIcon }}" style="color: var(--accent-solid);"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: bold;">Plot #{{ $loop->iteration }}</div>
+                                            <div style="font-size: 0.9rem; color: var(--text-secondary);">LVL {{ $plot->building['level'] ?? 1 }} {{ $plot->building['buildingID'] ?? 'Building' }}</div>
+                                        </div>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: bold; font-size: 1.1rem;">
                                         {{ $lemons }} 🍋
-                                        @if($lemons > 0)
-                                            <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.8rem; margin-left: 0.5rem;">Collect</button>
-                                        @endif
                                     </div>
                                 </div>
                             @endforeach

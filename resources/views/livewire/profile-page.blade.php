@@ -94,6 +94,33 @@ new #[Layout('layouts.app')] class extends Component
             }
         }
 
+        $userCardsAll = UserCard::where('userID', $userIdToFetch)->get(['cardID', 'amount']);
+        $allCardIDs = $userCardsAll->pluck('cardID')->unique()->toArray();
+        // Chunk fetching cards just in case it's huge
+        $allCards = collect();
+        foreach (array_chunk($allCardIDs, 500) as $chunk) {
+            $allCards = $allCards->merge(Card::whereIn('cardID', $chunk)->get(['cardID', 'rarity', 'eval']));
+        }
+        $allCards = $allCards->keyBy('cardID');
+
+        $totalStars = 0;
+        $totalEval = 0;
+        foreach ($userCardsAll as $uc) {
+            $c = $allCards->get($uc->cardID);
+            if ($c) {
+                $amount = $uc->amount ?? 1;
+                $totalStars += ($c->rarity ?? 1) * $amount;
+                $totalEval += ($c->eval ?? 0) * $amount;
+            }
+        }
+        $netWorth = ($userProfile->tomatoes ?? 0) + $totalEval;
+
+        $cloutedColIDs = collect($userProfile->cloutedCols ?? [])->pluck('id')->toArray();
+        $cloutedCollectionsList = [];
+        if (!empty($cloutedColIDs)) {
+            $cloutedCollectionsList = BotCollection::whereIn('collectionID', $cloutedColIDs)->get();
+        }
+
         return [
             'userProfile' => $userProfile,
             'favCard' => $favCard,
@@ -102,7 +129,10 @@ new #[Layout('layouts.app')] class extends Component
             'wishlistCollections' => $wishlistCollections,
             'userOwned' => $userOwned,
             'userFavs' => $userFavs,
-            'userWishlists' => $userWishlists
+            'userWishlists' => $userWishlists,
+            'totalStars' => $totalStars,
+            'netWorth' => $netWorth,
+            'cloutedCollectionsList' => $cloutedCollectionsList
         ];
     }
 };
@@ -187,6 +217,16 @@ new #[Layout('layouts.app')] class extends Component
                     "{{ $userProfile->preferences['profile']['bio'] ?? 'This user has not set a bio' }}"
                 </p>
             </div>
+
+            @if(!empty($userProfile->roles))
+                <div style="margin-left: auto; display: flex; flex-direction: column; gap: 0.5rem; text-align: right; z-index: 10;">
+                    @foreach($userProfile->roles as $role)
+                        <span style="background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: bold; color: var(--text-primary); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+                            {{ $role }}
+                        </span>
+                    @endforeach
+                </div>
+            @endif
         </div>
 
         <div style="display: flex; flex-wrap: wrap; gap: 2rem; flex-direction: row-reverse;">
@@ -216,13 +256,11 @@ new #[Layout('layouts.app')] class extends Component
                             <div style="font-size: 1.2rem; font-weight: bold;">{{ number_format($userProfile->vials ?? 0) }}</div>
                             <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Vials</div>
                         </div>
-                        @if(($userProfile->promoBal ?? 0) > 0)
                         <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
-                            <i class="ph-fill ph-gift" style="color: #a855f7; font-size: 2.5rem; margin-bottom: 0.5rem; display: inline-block;"></i>
-                            <div style="font-size: 1.2rem; font-weight: bold;">{{ number_format($userProfile->promoBal) }}</div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Promo</div>
+                            <i class="ph-fill ph-star" style="color: #fbbf24; font-size: 2.5rem; margin-bottom: 0.5rem; display: inline-block;"></i>
+                            <div style="font-size: 1.2rem; font-weight: bold;">{{ number_format($totalStars) }}</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Stars</div>
                         </div>
-                        @endif
                     </div>
                 </div>
 
@@ -234,8 +272,8 @@ new #[Layout('layouts.app')] class extends Component
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
                         <div style="display: flex; justify-content: space-between; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span style="color: var(--text-secondary);">XP</span>
-                            <span style="font-weight: bold;">{{ number_format($userProfile->xp ?? 0) }} <i class="ph-fill ph-star" style="color: #fbbf24;"></i></span>
+                            <span style="color: var(--text-secondary);">Net Worth</span>
+                            <span style="font-weight: bold;">{{ number_format($netWorth) }} 🍅</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
                             <span style="color: var(--text-secondary);">Daily Streak</span>
@@ -287,6 +325,29 @@ new #[Layout('layouts.app')] class extends Component
             </div>
 
         </div>
+
+        @if(count($cloutedCollectionsList) > 0)
+            <div class="glass-panel" style="padding: 2rem; margin-top: 2rem;">
+                <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="ph-fill ph-sparkle" style="color: #a855f7;"></i> Clouted Collections
+                </h2>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                    @foreach($cloutedCollectionsList as $col)
+                        <a href="{{ route('cards.index') }}?collectionID={{ $col->collectionID }}" style="display: block; text-decoration: none; color: inherit;">
+                            <div class="glass-panel" style="padding: 1rem; border: 1px solid rgba(168, 85, 247, 0.3); transition: transform 0.2s; text-align: center;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                                <h3 style="font-size: 1.1rem; color: #a855f7; margin-bottom: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $col->name }}</h3>
+                                <div style="margin-top: 0.5rem;">
+                                    <span style="background: rgba(168, 85, 247, 0.2); color: #a855f7; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">
+                                        ID: {{ $col->collectionID }}
+                                    </span>
+                                </div>
+                            </div>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        @endif
 
         @if($wishlistCards && $wishlistCards->total() > 0)
             <div id="wishlist-top" class="glass-panel" style="padding: 2rem; margin-top: 2rem;" x-data @scroll-to-wishlist.window="document.getElementById('wishlist-top').scrollIntoView({ behavior: 'smooth' })">

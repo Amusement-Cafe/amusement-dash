@@ -170,6 +170,14 @@
                             </template>
                         </div>
                     </div>
+                    
+                    @auth
+                        <template x-if="selectedCard?.userCopies > 0">
+                            <button @click="$dispatch('set-profile-fav', { cardId: selectedCard.cardID })" style="margin-top: 1.5rem; width: 100%; padding: 0.8rem; background: rgba(236, 72, 153, 0.1); border: 1px solid #ec4899; color: #ec4899; border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" onmouseover="this.style.background='rgba(236, 72, 153, 0.2)'" onmouseout="this.style.background='rgba(236, 72, 153, 0.1)'">
+                                <i class="ph-bold ph-heart"></i> Set as Profile Fav
+                            </button>
+                        </template>
+                    @endauth
                 </div>
             </div>
         </div>

@@ -7,13 +7,17 @@
 
         <!-- Link to our base CSS -->
         <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+        <link rel="icon" type="image/x-icon" href="https://amu.cards/favicon.ico">
         <script src="https://unpkg.com/@phosphor-icons/web"></script>
     </head>
     <body class="antialiased">
         
         <!-- Navigation -->
         <nav class="navbar animate-fade-in">
-            <div class="nav-brand">Amusement Club</div>
+            <div class="nav-brand" style="display: flex; align-items: center; gap: 0.8rem;">
+                <img src="https://amu.cards/favicon.ico" alt="Amusement Club" style="width: 28px; height: 28px; filter: drop-shadow(0 0 8px rgba(255,255,255,0.2));">
+                Amusement Club
+            </div>
             <div class="nav-links">
                 <a href="/" class="nav-link"><i class="ph-bold ph-house" style="font-size: 1.1rem; color: #a855f7;"></i> Home</a>
                 <a href="{{ route('cards.index') }}" class="nav-link"><i class="ph-bold ph-cards" style="font-size: 1.1rem; color: #60a5fa;"></i> All Cards</a>
@@ -63,7 +67,7 @@
                                 @endif
                             </a>
                             
-                            <a href="#" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1rem; color: white; text-decoration: none; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                            <a href="{{ route('preferences.index') }}" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1rem; color: white; text-decoration: none; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 <i class="ph-fill ph-gear" style="color: #a855f7; font-size: 1.2rem;"></i> Preferences
                             </a>
                             
@@ -129,5 +133,15 @@
             </div>
         </footer>
         
+        <livewire:global-actions />
+        
+        <!-- Global Notification Toast -->
+        <div x-data="{ show: false, message: '' }" 
+             @notify.window="message = $event.detail.message; show = true; setTimeout(() => show = false, 3000)"
+             x-show="show" 
+             x-transition.opacity.duration.300ms
+             style="display: none; position: fixed; bottom: 2rem; right: 2rem; background: #10b981; color: white; padding: 1rem 2rem; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 9999; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);">
+            <i class="ph-bold ph-check-circle" style="margin-right: 0.5rem;"></i> <span x-text="message"></span>
+        </div>
     </body>
 </html>
