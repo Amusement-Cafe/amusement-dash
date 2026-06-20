@@ -44,6 +44,7 @@
                     'ratingSum' => $card->ratingSum ?? 0,
                     'timesRated' => $card->timesRated ?? 0,
                     'owned' => $owned,
+                    'userCopies' => $owned ? (int)$owned : 0,
                     'fav' => $fav,
                     'wishlisted' => $wishlisted
                 ];
@@ -117,7 +118,12 @@
                         </div>
                         <div class="glass-panel" style="padding: 1rem; border: 1px dashed var(--glass-border);">
                             <p style="color: var(--text-secondary); font-size: 0.9rem;">Total Copies</p>
-                            <p style="font-size: 1.1rem; font-weight: 600;" x-text="selectedCard?.totalCopies"></p>
+                            <p style="font-size: 1.1rem; font-weight: 600;">
+                                <span x-text="selectedCard?.totalCopies"></span>
+                                <template x-if="selectedCard?.userCopies > 0">
+                                    <span style="color: var(--accent-solid); font-size: 0.9rem; margin-left: 0.5rem;" x-text="'(' + selectedCard.userCopies + ' yours)'"></span>
+                                </template>
+                            </p>
                         </div>
                         <div class="glass-panel" style="padding: 1rem; border: 1px dashed var(--glass-border);">
                             <p style="color: var(--text-secondary); font-size: 0.9rem;">Rating</p>

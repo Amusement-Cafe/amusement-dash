@@ -2,16 +2,25 @@
 
 use Livewire\Volt\Component;
 use Livewire\Attributes\Url;
+use Livewire\WithPagination;
 use App\Models\User;
 use App\Models\Card;
 use App\Models\BotCollection;
 use App\Models\UserWishlist;
+use App\Models\UserCard;
 use Livewire\Attributes\Layout;
 
 new #[Layout('layouts.app')] class extends Component
 {
+    use WithPagination;
+
     #[Url]
     public string $id = '';
+
+    public function updatingPage()
+    {
+        $this->dispatch('scroll-to-wishlist');
+    }
 
     public function with(): array
     {
@@ -26,6 +35,11 @@ new #[Layout('layouts.app')] class extends Component
                 'userProfile' => null,
                 'favCard' => null,
                 'favCollection' => null,
+                'wishlistCards' => null,
+                'wishlistCollections' => [],
+                'userOwned' => [],
+                'userFavs' => [],
+                'userWishlists' => []
             ];
         }
 
@@ -44,13 +58,40 @@ new #[Layout('layouts.app')] class extends Component
         $wishlistCardIDs = UserWishlist::where('userID', $userIdToFetch)->pluck('cardID')->toArray();
         $wishlistCardIDs = array_map('intval', $wishlistCardIDs);
         
-        $wishlistCards = [];
+        $wishlistCards = null;
         $wishlistCollections = [];
+        $userOwned = [];
+        $userFavs = [];
+        $userWishlists = [];
         
         if (!empty($wishlistCardIDs)) {
-            $wishlistCards = Card::whereIn('cardID', $wishlistCardIDs)->get();
-            $collectionIDs = $wishlistCards->pluck('collectionID')->unique()->toArray();
+            // Ensure pagination runs
+            $wishlistCards = Card::whereIn('cardID', $wishlistCardIDs)->paginate(12);
+            $collectionIDs = collect($wishlistCards->items())->pluck('collectionID')->unique()->toArray();
             $wishlistCollections = BotCollection::whereIn('collectionID', $collectionIDs)->get()->keyBy('collectionID')->toArray();
+            
+            if (auth()->check()) {
+                $myCardIDs = collect($wishlistCards->items())->pluck('cardID');
+                
+                $userCards = UserCard::where('userID', auth()->user()->userID)
+                    ->whereIn('cardID', $myCardIDs)
+                    ->get();
+                
+                foreach ($userCards as $uc) {
+                    $userOwned[$uc->cardID] = $uc->amount ?? 1;
+                    if ($uc->fav) {
+                        $userFavs[$uc->cardID] = true;
+                    }
+                }
+
+                $stringIDs = $myCardIDs->map(function($id) { return (string) $id; })->toArray();
+                $wishlists = \App\Models\UserWishlist::where('userID', auth()->user()->userID)
+                    ->whereIn('cardID', $stringIDs)
+                    ->get();
+                foreach ($wishlists as $w) {
+                    $userWishlists[(int)$w->cardID] = true;
+                }
+            }
         }
 
         return [
@@ -59,6 +100,9 @@ new #[Layout('layouts.app')] class extends Component
             'favCollection' => $favCollection,
             'wishlistCards' => $wishlistCards,
             'wishlistCollections' => $wishlistCollections,
+            'userOwned' => $userOwned,
+            'userFavs' => $userFavs,
+            'userWishlists' => $userWishlists
         ];
     }
 };
@@ -244,18 +288,28 @@ new #[Layout('layouts.app')] class extends Component
 
         </div>
 
-        @if(count($wishlistCards) > 0)
-            <div class="glass-panel" style="padding: 2rem; margin-top: 2rem;">
+        @if($wishlistCards && $wishlistCards->total() > 0)
+            <div id="wishlist-top" class="glass-panel" style="padding: 2rem; margin-top: 2rem;" x-data @scroll-to-wishlist.window="document.getElementById('wishlist-top').scrollIntoView({ behavior: 'smooth' })">
                 <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="ph-fill ph-sparkle" style="color: #ec4899;"></i> Wishlist
+                    <i class="ph-fill ph-sparkle" style="color: #ec4899;"></i> Wishlist <span style="color: var(--text-secondary); font-size: 1rem; font-weight: normal;">({{ number_format($wishlistCards->total()) }})</span>
                 </h2>
                 
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem;">
-                    @foreach($wishlistCards as $wCard)
-                        @php $wCol = $wishlistCollections[$wCard->collectionID] ?? null; @endphp
-                        <x-card-viewer :card="$wCard" :collectionName="$wCol['name'] ?? null" />
-                    @endforeach
+                <div wire:loading.remove>
+                    <x-card-grid :cards="$wishlistCards" :collections="$wishlistCollections" :userOwned="$userOwned" :userFavs="$userFavs" :userWishlists="$userWishlists" />
                 </div>
+                
+                <div wire:loading style="width: 100%;">
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5rem 0;">
+                        <i class="ph-bold ph-spinner" style="font-size: 4rem; color: #ec4899; animation: spin 1s linear infinite;"></i>
+                        <p style="color: var(--text-secondary); margin-top: 1rem; font-size: 1.2rem;">Loading wishlist...</p>
+                    </div>
+                </div>
+
+                @if($wishlistCards->hasPages())
+                    <div style="display: flex; justify-content: center; margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
+                        {{ $wishlistCards->links('components.custom-pagination') }}
+                    </div>
+                @endif
             </div>
         @endif
     @endif

@@ -204,7 +204,7 @@ new #[Layout('layouts.app')] class extends Component
                 ->get();
             
             foreach ($userCards as $uc) {
-                $userOwned[$uc->cardID] = true;
+                $userOwned[$uc->cardID] = $uc->amount ?? 1;
                 if ($uc->fav) {
                     $userFavs[$uc->cardID] = true;
                 }
