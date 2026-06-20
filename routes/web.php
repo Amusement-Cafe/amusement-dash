@@ -10,6 +10,7 @@ Volt::route('/claims', 'claims-page')->name('claims.index');
 Volt::route('/auctions', 'auctions-page')->name('auctions.index');
 Volt::route('/profile', 'profile-page')->name('profile.show');
 Volt::route('/inventory', 'inventory-page')->name('inventory.index')->middleware('auth');
+Volt::route('/collections', 'collections-page')->name('collections.index');
 
 use App\Http\Controllers\AuthController;
 

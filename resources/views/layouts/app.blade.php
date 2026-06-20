@@ -17,6 +17,7 @@
             <div class="nav-links">
                 <a href="/" class="nav-link">Home</a>
                 <a href="{{ route('cards.index') }}" class="nav-link">All Cards</a>
+                <a href="{{ route('collections.index') }}" class="nav-link">Collections</a>
                 <a href="{{ route('auctions.index') }}" class="nav-link">Auctions</a>
                 @auth
                     <a href="{{ route('cards.index') }}?owner={{ auth()->user()->userID }}" class="nav-link">My Cards</a>
