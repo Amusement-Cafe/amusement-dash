@@ -24,6 +24,7 @@
                 <a href="{{ route('collections.index') }}" class="nav-link"><i class="ph-bold ph-books" style="font-size: 1.1rem; color: #34d399;"></i> Collections</a>
                 <a href="{{ route('auctions.index') }}" class="nav-link"><i class="ph-bold ph-gavel" style="font-size: 1.1rem; color: #fbbf24;"></i> Auctions</a>
                 @auth
+                    <a href="{{ route('heroes.index') }}" class="nav-link"><i class="ph-bold ph-mask-happy" style="font-size: 1.1rem; color: #ec4899;"></i> Heroes</a>
                     @php
                         $user = auth()->user();
                         $avatarIndex = is_numeric($user->userID) ? (substr($user->userID, -1) % 6) : 0;
