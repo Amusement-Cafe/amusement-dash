@@ -13,11 +13,25 @@ new #[Layout('layouts.app')] class extends Component
 {
     use WithPagination;
 
+    #[Url]
     public $search = '';
+    
+    #[Url]
     public $rarity = '';
+    
+    #[Url]
     public $collectionID = '';
+    
+    #[Url]
+    public $tag = '';
+    
+    #[Url]
     public string $sortBy = 'rarity';
+    
+    #[Url]
     public $sortDesc = true;
+    
+    #[Url]
     public $hidePromos = false;
     
     #[Url]
@@ -25,7 +39,7 @@ new #[Layout('layouts.app')] class extends Component
 
     public function updated($property)
     {
-        if (in_array($property, ['search', 'rarity', 'collectionID', 'sortBy', 'sortDesc', 'owner', 'hidePromos'])) {
+        if (in_array($property, ['search', 'rarity', 'collectionID', 'tag', 'sortBy', 'sortDesc', 'owner', 'hidePromos'])) {
             $this->resetPage();
         }
     }
@@ -72,11 +86,25 @@ new #[Layout('layouts.app')] class extends Component
             $query->where('collectionID', $this->collectionID);
         }
 
-        $query->orderBy($this->sortBy, $this->sortDesc ? 'desc' : 'asc');
+        if ($this->tag) {
+            $tagCardIDs = \App\Models\Tag::where('tagName', 'like', '%' . $this->tag . '%')
+                ->where('status', 'clear')
+                ->pluck('cardID')
+                ->toArray();
+                
+            if (empty($tagCardIDs)) {
+                $query->where('cardID', -1);
+            } else {
+                $query->whereIn('cardID', $tagCardIDs);
+            }
+        }
+
+        $query->orderBy($this->sortBy, $this->sortDesc ? 'desc' : 'asc')->orderBy('cardID', 'asc');
         $cards = $query->paginate(24);
 
         $userOwned = [];
         $userFavs = [];
+        $userWishlists = [];
         if (auth()->check()) {
             $userCards = UserCard::where('userID', auth()->user()->userID)
                 ->whereIn('cardID', $cards->pluck('cardID'))
@@ -88,6 +116,14 @@ new #[Layout('layouts.app')] class extends Component
                     $userFavs[$uc->cardID] = true;
                 }
             }
+
+            $stringIDs = $cards->pluck('cardID')->map(function($id) { return (string) $id; })->toArray();
+            $wishlists = \App\Models\UserWishlist::where('userID', auth()->user()->userID)
+                ->whereIn('cardID', $stringIDs)
+                ->get();
+            foreach ($wishlists as $w) {
+                $userWishlists[(int)$w->cardID] = true;
+            }
         }
 
         return [
@@ -95,6 +131,7 @@ new #[Layout('layouts.app')] class extends Component
             'collections' => $collections,
             'userOwned' => $userOwned,
             'userFavs' => $userFavs,
+            'userWishlists' => $userWishlists,
             'ownerUser' => $ownerUser
         ];
     }
@@ -113,6 +150,8 @@ new #[Layout('layouts.app')] class extends Component
         <!-- Filters -->
         <div class="glass-panel" style="padding: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
             <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search name or ID..." class="input-glass">
+            
+            <input type="text" wire:model.live.debounce.300ms="tag" placeholder="Search tags..." class="input-glass">
             
             <select wire:model.live="rarity" class="input-glass">
                 <option value="">All Rarities</option>
@@ -148,10 +187,10 @@ new #[Layout('layouts.app')] class extends Component
         </div>
     </div>
     
-    <x-card-grid :cards="$cards" :collections="$collections" :userOwned="$userOwned" :userFavs="$userFavs" />
+    <x-card-grid :cards="$cards" :collections="$collections" :userOwned="$userOwned" :userFavs="$userFavs" :userWishlists="$userWishlists" />
 
     <!-- Pagination -->
-    <div class="glass-panel" style="padding: 1rem;">
-        {{ $cards->links() }}
+    <div class="glass-panel" style="padding: 1rem; display: flex; justify-content: center;">
+        {{ $cards->links('components.custom-pagination') }}
     </div>
 </div>

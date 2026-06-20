@@ -7,6 +7,7 @@
 
         <!-- Link to our base CSS -->
         <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+        <script src="https://unpkg.com/@phosphor-icons/web"></script>
     </head>
     <body class="antialiased">
         

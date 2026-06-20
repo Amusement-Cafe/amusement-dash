@@ -147,8 +147,8 @@ new #[Layout('layouts.app')] class extends Component
             @endforeach
         </div>
 
-        <div class="glass-panel" style="padding: 1rem;">
-            {{ $auctions->links() }}
+        <div class="glass-panel" style="padding: 1rem; display: flex; justify-content: center;">
+            {{ $auctions->links('components.custom-pagination') }}
         </div>
     @else
         <div class="glass-panel" style="padding: 3rem; text-align: center;">
@@ -172,14 +172,16 @@ new #[Layout('layouts.app')] class extends Component
             </div>
             
             <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: center;">
-                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.5rem;">
                     <h2 style="font-size: 2rem; margin: 0;">{{ $selectedCard->displayName ?? $selectedCard->cardName }}</h2>
-                    @if(isset($userOwned[$selectedCard->cardID]))
-                        <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">Owned</span>
-                    @endif
-                    @if(isset($userFavs[$selectedCard->cardID]))
-                        <span style="background: rgba(236, 72, 153, 0.2); color: #f472b6; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">Favorited ❤️</span>
-                    @endif
+                    <div style="display: flex; gap: 0.5rem;">
+                        @if(isset($userOwned[$selectedCard->cardID]))
+                            <i class="ph-fill ph-check-circle" title="Owned" style="color: #34d399; font-size: 1.8rem; display: flex; align-items: center; justify-content: center; background: rgba(16, 185, 129, 0.2); border-radius: 50%; padding: 4px;"></i>
+                        @endif
+                        @if(isset($userFavs[$selectedCard->cardID]))
+                            <i class="ph-fill ph-heart" title="Favorited" style="color: #f472b6; font-size: 1.8rem; display: flex; align-items: center; justify-content: center; background: rgba(236, 72, 153, 0.2); border-radius: 50%; padding: 4px;"></i>
+                        @endif
+                    </div>
                 </div>
                 
                 <p style="color: var(--text-secondary); font-size: 1.2rem; margin-bottom: 1.5rem;">
