@@ -79,6 +79,11 @@ new #[Layout('layouts.app')] class extends Component
             $dashboardData['heroSlots'] = $heroSlots;
 
             $activePromos = \App\Models\Promo::where('expires', '>', now())->get();
+            foreach ($activePromos as $promo) {
+                if (!$promo->isBoost && $promo->promoID === $promo->promoName) {
+                    $promo->collectionCount = \App\Models\Card::where('collectionID', $promo->promoID)->count();
+                }
+            }
             $dashboardData['promos'] = $activePromos;
 
             $plots = \App\Models\Plot::where('userID', $user->userID)->get();
@@ -234,14 +239,62 @@ new #[Layout('layouts.app')] class extends Component
             </div>
 
             <!-- Promos -->
-            <div class="glass-panel" style="flex: 1 1 250px; padding: 1.5rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #8b5cf6;">
-                <i class="ph-fill ph-megaphone" style="font-size: 3.5rem; color: #8b5cf6;"></i>
-                <div>
-                    <h3 style="margin: 0 0 0.2rem 0; font-size: 1.2rem;">Active Events</h3>
-                    <p style="margin: 0; color: var(--text-secondary); font-size: 0.95rem;">
-                        {{ count($data['promos']) }} active promotional events currently running.
-                    </p>
+            <div class="glass-panel" style="flex: 1 1 250px; padding: 1.5rem; border-left: 4px solid #8b5cf6;">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                    <i class="ph-fill ph-megaphone" style="font-size: 2.5rem; color: #8b5cf6;"></i>
+                    <div>
+                        <h3 style="margin: 0 0 0.2rem 0; font-size: 1.2rem;">Active Events</h3>
+                        <p style="margin: 0; color: var(--text-secondary); font-size: 0.85rem;">
+                            {{ count($data['promos']) }} promotional events currently running.
+                        </p>
+                    </div>
                 </div>
+
+                @if(count($data['promos']) > 0)
+                    <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                        @foreach($data['promos'] as $promo)
+                            @php
+                                $cmd = '';
+                                $desc = '';
+                                $type = '';
+                                if ($promo->isBoost) {
+                                    $cmd = '/claim boost:true';
+                                    $desc = count($promo->cardIDs ?? []) . ' cards boosted';
+                                    $type = 'Boost Event';
+                                } elseif (!$promo->isBoost && $promo->promoID === $promo->promoName) {
+                                    $cmd = '/claim promo:true';
+                                    $desc = ($promo->collectionCount ?? 0) . ' cards in collection';
+                                    $type = 'New Event';
+                                } else {
+                                    $cmd = '/claim promo:true';
+                                    $desc = 'Promotional Event';
+                                    $type = 'Promo Event';
+                                }
+                            @endphp
+                            <div style="background: rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3); position: relative; cursor: pointer; transition: background 0.2s;" onclick="navigator.clipboard.writeText('{{ $cmd }}'); Livewire.dispatch('notify', { message: 'Copied command to clipboard!' });" onmouseover="this.style.background='rgba(139, 92, 246, 0.1)'" onmouseout="this.style.background='rgba(0,0,0,0.2)'">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                    <div style="font-weight: bold; color: #c084fc; font-size: 1.05rem;">
+                                        {{ $promo->promoName ?? 'Event' }}
+                                    </div>
+                                    <div style="background: rgba(139, 92, 246, 0.2); color: #c084fc; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold;">
+                                        {{ $type }}
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+                                    <span>{{ $desc }}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.5rem;">
+                                    <div style="font-family: monospace; font-size: 0.8rem; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; color: #9ca3af;">
+                                        <i class="ph ph-copy"></i> {{ $cmd }}
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: #f59e0b; display: flex; align-items: center; gap: 0.3rem;">
+                                        <i class="ph-fill ph-clock"></i> Ends {{ \Carbon\Carbon::parse($promo->expires)->diffForHumans() }}
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
             </div>
         </div>
 

@@ -54,7 +54,7 @@ new #[Layout('layouts.app')] class extends Component {
     }
 };
 ?>
-<div x-data="{ showModal: false, selectedHero: null }">
+<div x-data="{ showModal: false, selectedHero: null, picIndex: 0 }">
     <div style="margin-bottom: 2rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 1.5rem;">
         <div>
             <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 1rem;">
@@ -83,14 +83,20 @@ new #[Layout('layouts.app')] class extends Component {
                         'isMyHero' => true
                     ];
                 @endphp
-                <div @click="selectedHero = {{ json_encode($myHeroData) }}; showModal = true;" class="glass-panel" style="cursor: pointer; padding: 1.5rem; text-align: center; transition: transform 0.2s, box-shadow 0.2s; position: relative; overflow: hidden; border: 2px solid #ec4899; box-shadow: 0 0 15px rgba(236,72,153,0.3);" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 25px rgba(236, 72, 153, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 0 15px rgba(236,72,153,0.3)';">
-                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 80px; @if(!empty($myHero->pictures) && isset($myHero->pictures[0])) background-image: url('{{ $myHero->pictures[0] }}'); background-size: cover; background-position: center; filter: blur(6px); opacity: 0.6; @else background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(236,72,153,0.3)); @endif z-index: 1;"></div>
+                <div wire:key="my-hero-{{ $myHero->heroID }}" x-data="{ pics: {{ json_encode($myHero->pictures ?? []) }}, pIdx: 0 }" @click="selectedHero = {{ json_encode($myHeroData) }}; picIndex = 0; showModal = true;" class="glass-panel" style="cursor: pointer; padding: 1.5rem; text-align: center; transition: transform 0.2s, box-shadow 0.2s; position: relative; overflow: hidden; border: 2px solid #ec4899; box-shadow: 0 0 15px rgba(236,72,153,0.3);" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 25px rgba(236, 72, 153, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 0 15px rgba(236,72,153,0.3)';">
+                    <template x-if="pics.length > 0">
+                        <div style="position: absolute; top: 0; left: 0; right: 0; height: 80px; background-size: cover; background-position: center; filter: blur(6px); opacity: 0.6; z-index: 1;" :style="'background-image: url(' + pics[pIdx] + ')'"></div>
+                    </template>
+                    <template x-if="pics.length === 0">
+                        <div style="position: absolute; top: 0; left: 0; right: 0; height: 80px; background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(236,72,153,0.3)); z-index: 1;"></div>
+                    </template>
                     <div style="position: relative; z-index: 2;">
-                        @if(!empty($myHero->pictures) && isset($myHero->pictures[0]))
-                            <img src="{{ $myHero->pictures[0] }}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #ec4899; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
-                        @else
+                        <template x-if="pics.length > 0">
+                            <img :src="pics[pIdx]" x-on:error="if(pIdx < pics.length - 1) pIdx++; else $el.style.display='none'" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #ec4899; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+                        </template>
+                        <template x-if="pics.length === 0">
                             <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--glass-border); display: inline-flex; align-items: center; justify-content: center; font-size: 3rem; margin: 0 auto; box-shadow: 0 5px 15px rgba(0,0,0,0.5); border: 3px solid #ec4899;">🦸</div>
-                        @endif
+                        </template>
                         <h3 style="margin: 1rem 0 0.5rem 0; font-size: 1.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #ec4899;">{{ $myHero->name ?? 'Unknown' }} (Active)</h3>
                         <div style="display: inline-block; background: var(--accent-solid); color: white; padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: 0.8rem; margin-bottom: 0.5rem;">
                             LVL {{ $heroLevel }}
@@ -114,14 +120,20 @@ new #[Layout('layouts.app')] class extends Component {
                         'isMyHero' => auth()->check() && auth()->user()->hero === $hero->heroID
                     ];
                 @endphp
-                <div @click="selectedHero = {{ json_encode($heroData) }}; showModal = true;" class="glass-panel" style="cursor: pointer; padding: 1.5rem; text-align: center; transition: transform 0.2s, box-shadow 0.2s; position: relative; overflow: hidden;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 25px rgba(236, 72, 153, 0.2)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
-                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 80px; @if(!empty($hero->pictures) && isset($hero->pictures[0])) background-image: url('{{ $hero->pictures[0] }}'); background-size: cover; background-position: center; filter: blur(6px); opacity: 0.4; @else background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(236,72,153,0.3)); @endif z-index: 1;"></div>
+                <div wire:key="hero-{{ $hero->heroID }}" x-data="{ pics: {{ json_encode($hero->pictures ?? []) }}, pIdx: 0 }" @click="selectedHero = {{ json_encode($heroData) }}; picIndex = 0; showModal = true;" class="glass-panel" style="cursor: pointer; padding: 1.5rem; text-align: center; transition: transform 0.2s, box-shadow 0.2s; position: relative; overflow: hidden;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 10px 25px rgba(236, 72, 153, 0.2)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                    <template x-if="pics.length > 0">
+                        <div style="position: absolute; top: 0; left: 0; right: 0; height: 80px; background-size: cover; background-position: center; filter: blur(6px); opacity: 0.4; z-index: 1;" :style="'background-image: url(' + pics[pIdx] + ')'"></div>
+                    </template>
+                    <template x-if="pics.length === 0">
+                        <div style="position: absolute; top: 0; left: 0; right: 0; height: 80px; background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(236,72,153,0.3)); z-index: 1;"></div>
+                    </template>
                     <div style="position: relative; z-index: 2;">
-                        @if(!empty($hero->pictures) && isset($hero->pictures[0]))
-                            <img src="{{ $hero->pictures[0] }}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--glass-bg); box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
-                        @else
+                        <template x-if="pics.length > 0">
+                            <img :src="pics[pIdx]" x-on:error="if(pIdx < pics.length - 1) pIdx++; else $el.style.display='none'" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--glass-bg); box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+                        </template>
+                        <template x-if="pics.length === 0">
                             <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--glass-border); display: inline-flex; align-items: center; justify-content: center; font-size: 3rem; margin: 0 auto; box-shadow: 0 5px 15px rgba(0,0,0,0.5); border: 3px solid var(--glass-bg);">🦸</div>
-                        @endif
+                        </template>
                         <h3 style="margin: 1rem 0 0.5rem 0; font-size: 1.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $hero->name ?? 'Unknown' }}</h3>
                         <div style="display: inline-block; background: var(--accent-solid); color: white; padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: 0.8rem; margin-bottom: 0.5rem;">
                             LVL {{ $heroLevel }}
@@ -169,11 +181,11 @@ new #[Layout('layouts.app')] class extends Component {
                     <div style="flex-shrink: 0; background: #000; display: flex; align-items: center; justify-content: center; max-height: 400px; overflow: hidden; position: relative;">
                         <template x-if="selectedHero?.pictures && selectedHero.pictures.length > 0">
                             <!-- Blurred Background -->
-                            <div style="position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(15px); opacity: 0.5;" :style="'background-image: url(' + selectedHero.pictures[0] + ')'"></div>
+                            <div style="position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(15px); opacity: 0.5;" :style="'background-image: url(' + selectedHero.pictures[picIndex] + ')'"></div>
                         </template>
                         <template x-if="selectedHero?.pictures && selectedHero.pictures.length > 0">
                             <!-- Main Full Image -->
-                            <img :src="selectedHero.pictures[0]" style="max-width: 100%; max-height: 400px; object-fit: contain; position: relative; z-index: 2; box-shadow: 0 10px 30px rgba(0,0,0,0.7);">
+                            <img :src="selectedHero.pictures[picIndex]" x-on:error="if(picIndex < selectedHero.pictures.length - 1) picIndex++; else $el.style.display='none'" style="max-width: 100%; max-height: 400px; object-fit: contain; position: relative; z-index: 2; box-shadow: 0 10px 30px rgba(0,0,0,0.7);">
                         </template>
                         
                         <template x-if="!selectedHero?.pictures || selectedHero.pictures.length === 0">

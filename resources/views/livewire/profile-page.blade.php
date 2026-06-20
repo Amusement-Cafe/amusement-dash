@@ -121,6 +121,15 @@ new #[Layout('layouts.app')] class extends Component
             $cloutedCollectionsList = BotCollection::whereIn('collectionID', $cloutedColIDs)->get();
         }
 
+        $hero = null;
+        $heroLevel = 0;
+        if ($userProfile && !empty($userProfile->hero)) {
+            $hero = \App\Models\Hero::where('heroID', $userProfile->hero)->first();
+            if ($hero) {
+                $heroLevel = floor(sqrt(($hero->xp ?? 0) * 2));
+            }
+        }
+
         return [
             'userProfile' => $userProfile,
             'favCard' => $favCard,
@@ -132,7 +141,9 @@ new #[Layout('layouts.app')] class extends Component
             'userWishlists' => $userWishlists,
             'totalStars' => $totalStars,
             'netWorth' => $netWorth,
-            'cloutedCollectionsList' => $cloutedCollectionsList
+            'cloutedCollectionsList' => $cloutedCollectionsList,
+            'hero' => $hero,
+            'heroLevel' => $heroLevel
         ];
     }
 };
@@ -208,9 +219,19 @@ new #[Layout('layouts.app')] class extends Component
                 </h1>
                 
                 @if(!empty($userProfile->preferences['profile']['title']))
-                    <p style="color: {{ $hexColor }}; font-size: 1.2rem; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin-top: 0.5rem;">
+                    <p style="color: {{ $hexColor }}; font-size: 1.2rem; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin-top: 0.5rem; margin-bottom: 0;">
                         {{ $userProfile->preferences['profile']['title'] }}
                     </p>
+                @endif
+
+                @if(!empty($userProfile->roles))
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; z-index: 10;">
+                        @foreach($userProfile->roles as $role)
+                            <span style="background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: bold; color: var(--text-primary); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+                                {{ $role }}
+                            </span>
+                        @endforeach
+                    </div>
                 @endif
 
                 <p style="color: var(--text-secondary); font-size: 1.1rem; max-width: 600px; margin: 1rem 0 0 0;">
@@ -218,13 +239,24 @@ new #[Layout('layouts.app')] class extends Component
                 </p>
             </div>
 
-            @if(!empty($userProfile->roles))
-                <div style="margin-left: auto; display: flex; flex-direction: column; gap: 0.5rem; text-align: right; z-index: 10;">
-                    @foreach($userProfile->roles as $role)
-                        <span style="background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: bold; color: var(--text-primary); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
-                            {{ $role }}
-                        </span>
-                    @endforeach
+            @if($hero)
+                <div style="margin-left: auto; display: flex; flex-direction: column; align-items: center; z-index: 10;">
+                    <div style="position: relative;">
+                        @if(!empty($hero->pictures) && isset($hero->pictures[0]))
+                            <img src="{{ $hero->pictures[0] }}" alt="Hero Avatar" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid #ec4899; box-shadow: 0 5px 15px rgba(236, 72, 153, 0.3);">
+                        @else
+                            <div style="width: 90px; height: 90px; border-radius: 50%; background: var(--glass-border); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; border: 3px solid #ec4899;">🦸</div>
+                        @endif
+                        <div style="position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); background: #ec4899; color: white; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 0.75rem; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+                            LVL {{ $heroLevel }}
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.2rem; text-align: center;">
+                        <div style="font-weight: bold; color: white; font-size: 1.1rem;">{{ $hero->name ?? 'Hero' }}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.3rem; margin-top: 0.2rem;">
+                            <i class="ph-fill ph-users" style="color: #3b82f6;"></i> {{ number_format($hero->followers ?? 0) }} followers
+                        </div>
+                    </div>
                 </div>
             @endif
         </div>
