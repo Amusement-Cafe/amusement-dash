@@ -64,11 +64,17 @@ new #[Layout('layouts.app')] class extends Component
     #[Url]
     public string $owner = '';
 
+    public function updatingPage()
+    {
+        $this->dispatch('scroll-to-top');
+    }
+
     public function updated($property)
     {
         if (in_array($property, ['search', 'rarity', 'collectionID', 'sortBy', 'sortDesc', 'owner', 'hidePromos', 'filterOwned', 'filterFav', 'filterWish'])) {
             $this->resetPage();
         }
+        $this->dispatch('scroll-to-top');
     }
 
     public function with(): array
@@ -80,10 +86,32 @@ new #[Layout('layouts.app')] class extends Component
         $query = Card::query();
 
         $ownerUser = null;
+        $ownerAvatar = null;
         if ($this->owner) {
             $ownerUser = \App\Models\User::where('userID', $this->owner)->first();
             $ownerCardIDs = \App\Models\UserCard::where('userID', $this->owner)->pluck('cardID')->toArray();
             
+            if ($ownerUser) {
+                $avatarIndex = is_numeric($ownerUser->userID) ? (substr($ownerUser->userID, -1) % 6) : 0;
+                $defaultAvatar = "https://cdn.discordapp.com/embed/avatars/{$avatarIndex}.png";
+                
+                $ownerAvatar = Cache::remember('discord_avatar_' . $ownerUser->userID, 86400, function() use ($ownerUser, $defaultAvatar) {
+                    $botToken = env('DISCORD_BOT_TOKEN');
+                    if (!$botToken) return $defaultAvatar;
+                    
+                    $response = \Illuminate\Support\Facades\Http::withHeaders([
+                        'Authorization' => "Bot {$botToken}"
+                    ])->get("https://discord.com/api/users/{$ownerUser->userID}");
+                    
+                    if ($response->successful() && !empty($response->json('avatar'))) {
+                        $hash = $response->json('avatar');
+                        $ext = str_starts_with($hash, 'a_') ? 'gif' : 'png';
+                        return "https://cdn.discordapp.com/avatars/{$ownerUser->userID}/{$hash}.{$ext}?size=256";
+                    }
+                    return $defaultAvatar;
+                });
+            }
+
             // If the user owns no cards, force an impossible condition so it returns 0 results cleanly
             if (empty($ownerCardIDs)) {
                 $query->where('cardID', -1);
@@ -191,35 +219,66 @@ new #[Layout('layouts.app')] class extends Component
             }
         }
 
+        $activeFiltersCount = 0;
+        if ($this->search !== '') $activeFiltersCount++;
+        if ($this->rarity !== '') $activeFiltersCount++;
+        if ($this->collectionID !== '') $activeFiltersCount++;
+        if (!empty($this->tags)) $activeFiltersCount++;
+        if ($this->hidePromos) $activeFiltersCount++;
+        if ($this->filterOwned !== '') $activeFiltersCount++;
+        if ($this->filterFav !== '') $activeFiltersCount++;
+        if ($this->filterWish !== '') $activeFiltersCount++;
+
         return [
             'cards' => $cards,
             'collections' => $collections,
             'userOwned' => $userOwned,
             'userFavs' => $userFavs,
             'userWishlists' => $userWishlists,
-            'ownerUser' => $ownerUser
+            'ownerUser' => $ownerUser,
+            'ownerAvatar' => $ownerAvatar,
+            'activeFiltersCount' => $activeFiltersCount
         ];
     }
 };
 ?>
 
-<div>
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-        <div>
-            <h1 style="font-size: 2.5rem; margin: 0;">{{ $owner ? ($ownerUser ? $ownerUser->username . "'s Cards" : "User " . $owner . "'s Cards") : 'All Cards Directory' }}</h1>
-            @if($owner)
-                <p style="color: var(--text-secondary); margin-top: 0.5rem;">Viewing collection of {{ $ownerUser ? $ownerUser->username : $owner }}</p>
-            @endif
-        </div>
-        
-        <!-- Filters Component -->
-        <x-card-filters :collections="$collections" :tags="$tags" :sortDesc="$sortDesc" :hidePromos="$hidePromos" />
+<div x-data @scroll-to-top.window="document.getElementById('card-directory-top').scrollIntoView({ behavior: 'smooth' })">
+    <div id="card-directory-top" style="margin-bottom: 1rem;">
+        @if($owner)
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <img src="{{ $ownerAvatar }}" alt="Avatar" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-solid); box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);">
+                <h1 style="font-size: 2.5rem; margin: 0; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <span style="color: var(--accent-solid); text-shadow: 0 0 10px rgba(99, 102, 241, 0.3);">{{ $ownerUser ? $ownerUser->username : "User " . $owner }}</span>'s Cards
+                    <span style="color: var(--text-secondary); font-size: 1.5rem; font-weight: normal;">({{ number_format($cards->total()) }})</span>
+                </h1>
+            </div>
+        @else
+            <h1 style="font-size: 2.5rem; margin: 0; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                All Cards Directory 
+                <span style="color: var(--text-secondary); font-size: 1.5rem; font-weight: normal;">({{ number_format($cards->total()) }})</span>
+            </h1>
+        @endif
     </div>
     
-    <x-card-grid :cards="$cards" :collections="$collections" :userOwned="$userOwned" :userFavs="$userFavs" :userWishlists="$userWishlists" />
+    <!-- Filters Component -->
+    <x-card-filters :collections="$collections" :tags="$tags" :sortDesc="$sortDesc" :hidePromos="$hidePromos" :activeFiltersCount="$activeFiltersCount" />
+    
+    <div wire:loading.remove>
+        <x-card-grid :cards="$cards" :collections="$collections" :userOwned="$userOwned" :userFavs="$userFavs" :userWishlists="$userWishlists" />
+    </div>
+    
+    <div wire:loading style="width: 100%;">
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5rem 0;">
+            <i class="ph-bold ph-spinner" style="font-size: 4rem; color: var(--accent-solid); animation: spin 1s linear infinite;"></i>
+            <p style="color: var(--text-secondary); margin-top: 1rem; font-size: 1.2rem;">Loading cards...</p>
+        </div>
+    </div>
 
     <!-- Pagination -->
-    <div class="glass-panel" style="padding: 1rem; display: flex; justify-content: center;">
-        {{ $cards->links('components.custom-pagination') }}
-    </div>
+    @if($cards->hasPages())
+        <div class="glass-panel" style="padding: 1rem; display: flex; justify-content: center;">
+            {{ $cards->links('components.custom-pagination') }}
+        </div>
+    @endif
 </div>

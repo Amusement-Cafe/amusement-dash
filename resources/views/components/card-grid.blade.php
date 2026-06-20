@@ -54,14 +54,25 @@
         @endforeach
     </div>
 
+    <style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+
     <!-- Modal using Alpine -->
     <template x-teleport="body">
-        <div x-show="showModal" style="display: none;" class="modal-overlay" @click.self="showModal = false">
-            <div class="modal-content glass-panel" style="display: flex; flex-direction: row; flex-wrap: wrap; padding: 2rem; gap: 2rem; position: relative;">
-                <button @click="showModal = false" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
-                
-                <!-- Left Side: Image -->
-                <div style="flex: 1; min-width: 300px; display: flex; align-items: center; justify-content: center; background: transparent; border-radius: 8px; padding: 1rem;">
+        <div x-show="showModal" style="display: none;" x-transition.opacity.duration.200ms>
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; display: flex; padding: 1rem;" @click.self="showModal = false">
+                <div class="glass-panel no-scrollbar" style="display: flex; flex-direction: row; flex-wrap: wrap; padding: 2rem; gap: 2rem; position: relative; max-width: 1000px; width: 100%; max-height: 90vh; overflow-y: auto;">
+                    <button @click="showModal = false" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                    
+                    <!-- Left Side: Image -->
+                    <div style="flex: 1; min-width: 300px; display: flex; align-items: flex-start; justify-content: center; background: transparent; border-radius: 8px; padding: 1rem; position: sticky; top: 0;">
                     <template x-if="selectedCard?.cardURL">
                         <img :src="selectedCard.cardURL" :alt="selectedCard.displayName" style="max-width: 100%; max-height: 500px; object-fit: contain;">
                     </template>

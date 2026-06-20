@@ -95,9 +95,11 @@ new #[Layout('layouts.app')] class extends Component
             @endforeach
         </div>
 
-        <div class="glass-panel" style="padding: 1rem; display: flex; justify-content: center;">
-            {{ $collections->links('components.custom-pagination') }}
-        </div>
+        @if($collections->hasPages())
+            <div class="glass-panel" style="padding: 1rem; display: flex; justify-content: center;">
+                {{ $collections->links('components.custom-pagination') }}
+            </div>
+        @endif
     @else
         <div class="glass-panel" style="padding: 3rem; text-align: center;">
             <p style="color: var(--text-secondary); font-size: 1.2rem;">No collections found.</p>
