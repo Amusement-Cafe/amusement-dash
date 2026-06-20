@@ -29,3 +29,5 @@ This project is a web dashboard for the "Amusement Club 3.0" Discord bot. It is 
 - **Trending Cards**: ⏳ Main page showcasing trending cards (Pending).
 - **Personal Dashboard / Inventory**: ⏳ Showing inventory, plots, and quest lists (Pending).
 - **Preferences**: ⏳ UI to manage user preferences (Pending).
+
+9. **Currency Emojis**: Always keep tomatoes, vials, and lemons displayed as their default text emojis (`🍅`, `🧪`, `🍋`). Do not replace these specific currencies with icon libraries (like Phosphor or FontAwesome).
