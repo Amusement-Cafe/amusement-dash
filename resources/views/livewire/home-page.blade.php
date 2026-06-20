@@ -69,11 +69,14 @@ new #[Layout('layouts.app')] class extends Component
 
             $hero = null;
             if ($user->hero) {
-                $hero = \App\Models\Hero::where('name', $user->hero)->first();
+                $hero = \App\Models\Hero::where('heroID', $user->hero)->first();
             }
             $heroLevel = $hero ? floor(sqrt(($hero->xp ?? 0) * 2)) : 0;
             $dashboardData['hero'] = $hero;
             $dashboardData['heroLevel'] = $heroLevel;
+
+            $heroSlots = \Illuminate\Support\Facades\DB::connection('mongodb')->table('userslots')->where('userID', $user->userID)->get();
+            $dashboardData['heroSlots'] = $heroSlots;
 
             $activePromos = \App\Models\Promo::where('expires', '>', now())->get();
             $dashboardData['promos'] = $activePromos;
@@ -177,10 +180,10 @@ new #[Layout('layouts.app')] class extends Component
             </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2rem;">
             
             <!-- Daily Status -->
-            <div class="glass-panel" style="padding: 1.5rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid {{ $data['daily']['canClaim'] ? '#10b981' : '#f59e0b' }};">
+            <div class="glass-panel" style="flex: 1 1 250px; padding: 1.5rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid {{ $data['daily']['canClaim'] ? '#10b981' : '#f59e0b' }};">
                 <i class="ph-fill ph-calendar-check" style="font-size: 3.5rem; color: {{ $data['daily']['canClaim'] ? '#10b981' : '#f59e0b' }};"></i>
                 <div>
                     <h3 style="margin: 0 0 0.2rem 0; font-size: 1.2rem;">Daily Claim <span style="font-size: 0.9rem; color: #ef4444; margin-left: 0.5rem;"><i class="ph-fill ph-fire"></i> {{ $data['daily']['streak'] }}</span></h3>
@@ -190,19 +193,8 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
             </div>
 
-            <!-- Promos -->
-            <div class="glass-panel" style="padding: 1.5rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #8b5cf6;">
-                <i class="ph-fill ph-megaphone" style="font-size: 3.5rem; color: #8b5cf6;"></i>
-                <div>
-                    <h3 style="margin: 0 0 0.2rem 0; font-size: 1.2rem;">Active Events</h3>
-                    <p style="margin: 0; color: var(--text-secondary); font-size: 0.95rem;">
-                        {{ count($data['promos']) }} active promotional events currently running.
-                    </p>
-                </div>
-            </div>
-
             <!-- Inventory Summary -->
-            <a href="/inventory" class="glass-panel" style="padding: 1.5rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #3b82f6; text-decoration: none; color: inherit; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='translateY(0)';">
+            <a href="/inventory" class="glass-panel" style="flex: 1 1 250px; padding: 1.5rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #3b82f6; text-decoration: none; color: inherit; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='translateY(0)';">
                 <i class="ph-fill ph-backpack" style="font-size: 3.5rem; color: #3b82f6;"></i>
                 <div>
                     <h3 style="margin: 0 0 0.2rem 0; font-size: 1.2rem;">Inventory</h3>
@@ -211,9 +203,11 @@ new #[Layout('layouts.app')] class extends Component
                     </p>
                 </div>
             </a>
+        </div>
 
+        <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2rem;">
             <!-- Voting -->
-            <div class="glass-panel" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; border-left: 4px solid #f43f5e;">
+            <div class="glass-panel" style="flex: 1 1 250px; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; border-left: 4px solid #f43f5e;">
                 <div style="display: flex; align-items: center; gap: 1rem;">
                     <i class="ph-fill ph-check-square-offset" style="font-size: 3.5rem; color: #f43f5e;"></i>
                     <div>
@@ -238,14 +232,27 @@ new #[Layout('layouts.app')] class extends Component
                     </a>
                 </div>
             </div>
+
+            <!-- Promos -->
+            <div class="glass-panel" style="flex: 1 1 250px; padding: 1.5rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #8b5cf6;">
+                <i class="ph-fill ph-megaphone" style="font-size: 3.5rem; color: #8b5cf6;"></i>
+                <div>
+                    <h3 style="margin: 0 0 0.2rem 0; font-size: 1.2rem;">Active Events</h3>
+                    <p style="margin: 0; color: var(--text-secondary); font-size: 0.95rem;">
+                        {{ count($data['promos']) }} active promotional events currently running.
+                    </p>
+                </div>
+            </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
+
+        <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 3rem; align-items: flex-start;">
             
-            <!-- Left Column: Hero & Plots -->
-            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                @if($data['hero'])
-                    <div class="glass-panel" style="padding: 2rem 1.5rem; text-align: center; position: relative; overflow: hidden;">
+            <!-- Left Column -->
+            <div style="flex: 1 1 350px; display: flex; flex-direction: column;">
+            
+            @if($data['hero'])
+                <div class="glass-panel" style="break-inside: avoid; margin-bottom: 1.5rem; padding: 2rem 1.5rem; text-align: center; position: relative; overflow: hidden;">
                         <div style="position: absolute; top: 0; left: 0; right: 0; height: 120px; background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(236,72,153,0.3)); z-index: 1;"></div>
                         <div style="position: relative; z-index: 2;">
                             @if(!empty($data['hero']->pictures) && isset($data['hero']->pictures[0]))
@@ -253,7 +260,7 @@ new #[Layout('layouts.app')] class extends Component
                             @else
                                 <div style="width: 140px; height: 140px; border-radius: 50%; background: var(--glass-border); display: inline-flex; align-items: center; justify-content: center; font-size: 4rem; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 4px solid var(--glass-bg);">🦸</div>
                             @endif
-                            <h2 style="margin: 1.5rem 0 0.5rem 0; font-size: 1.8rem;">{{ $data['hero']->name }}</h2>
+                            <h2 style="margin: 1.5rem 0 0.5rem 0; font-size: 1.8rem;">{{ $data['hero']->name ?? 'Unknown Hero' }}</h2>
                             <div style="display: inline-block; background: var(--accent-solid); color: white; padding: 4px 16px; border-radius: 12px; font-weight: bold; font-size: 0.9rem;">
                                 LVL {{ $data['heroLevel'] }}
                             </div>
@@ -267,110 +274,38 @@ new #[Layout('layouts.app')] class extends Component
                                     <div style="font-weight: bold; font-size: 1.2rem;"><i class="ph-fill ph-star" style="color: #fbbf24;"></i> {{ number_format($data['hero']->xp ?? 0) }}</div>
                                 </div>
                             </div>
+
+                            @if(count($data['heroSlots'] ?? []) > 0)
+                                <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); text-align: left;">
+                                    <div style="font-weight: bold; font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.8rem; text-transform: uppercase;">Equipped Effects</div>
+                                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                        @foreach($data['heroSlots'] as $slot)
+                                            <div style="background: rgba(0,0,0,0.2); padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between;">
+                                                <div style="display: flex; align-items: center; gap: 0.5rem; color: {{ isset($slot->effectName) && $slot->effectName ? '#a855f7' : 'var(--text-secondary)' }}; font-weight: bold;">
+                                                    <i class="ph-fill {{ isset($slot->effectName) && $slot->effectName ? 'ph-magic-wand' : 'ph-lock-key' }}"></i>
+                                                    {{ isset($slot->effectName) && $slot->effectName ? ucfirst($slot->effectName) : 'Empty Slot' }}
+                                                </div>
+                                                @if(isset($slot->effectName) && $slot->effectName && isset($slot->slotExpires))
+                                                    <div style="font-size: 0.8rem; color: #f59e0b;">
+                                                        <i class="ph-fill ph-clock"></i> {{ \Carbon\Carbon::parse($slot->slotExpires)->diffForHumans() }}
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 @else
-                    <div class="glass-panel" style="padding: 2rem; text-align: center; border: 2px dashed var(--glass-border);">
+                <div class="glass-panel" style="break-inside: avoid; margin-bottom: 1.5rem; padding: 2rem; text-align: center; border: 2px dashed var(--glass-border);">
                         <i class="ph-light ph-user-circle-plus" style="font-size: 4rem; margin-bottom: 1rem; color: var(--text-secondary);"></i>
                         <h3 style="margin: 0 0 0.5rem 0;">No Hero Assigned</h3>
                         <p style="color: var(--text-secondary); margin: 0;">You don't have an active hero.</p>
                     </div>
                 @endif
-
-                <div class="glass-panel" style="padding: 1.5rem;">
-                    <h3 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-house-line" style="color: #eab308; font-size: 1.5rem;"></i> Your Plots</h3>
-                    @if(count($data['plots']) > 0)
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            @foreach($data['plots'] as $plot)
-                                @php
-                                    $lemons = $plot->building['storedLemons'] ?? 0;
-                                    $bID = strtolower($plot->building['buildingID'] ?? '');
-                                    $bIcon = match(true) {
-                                        str_contains($bID, 'farm') || str_contains($bID, 'lemon') => 'ph-plant',
-                                        str_contains($bID, 'mine') => 'ph-pickaxe',
-                                        str_contains($bID, 'bank') || str_contains($bID, 'vault') => 'ph-bank',
-                                        str_contains($bID, 'factory') => 'ph-factory',
-                                        str_contains($bID, 'shop') || str_contains($bID, 'store') => 'ph-storefront',
-                                        default => 'ph-house'
-                                    };
-                                @endphp
-                                <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                                    <div style="display: flex; align-items: center; gap: 1rem;">
-                                        <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
-                                            <i class="ph-fill {{ $bIcon }}" style="color: var(--accent-solid);"></i>
-                                        </div>
-                                        <div>
-                                            <div style="font-weight: bold;">Plot #{{ $loop->iteration }}</div>
-                                            <div style="font-size: 0.9rem; color: var(--text-secondary);">LVL {{ $plot->building['level'] ?? 1 }} {{ $plot->building['buildingID'] ?? 'Building' }}</div>
-                                        </div>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: bold; font-size: 1.1rem;">
-                                        {{ $lemons }} 🍋
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <div style="text-align: center; padding: 2rem 0; opacity: 0.6;">
-                            <i class="ph-light ph-plant" style="font-size: 3rem; margin-bottom: 1rem;"></i>
-                            <p style="margin: 0;">You don't have any plots yet.</p>
-                        </div>
-                    @endif
-                </div>
-                
-                @if(count($data['wishlistAuctions']) > 0)
-                    <div class="glass-panel" style="padding: 1.5rem;">
-                        <h3 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-gavel" style="color: #f59e0b; font-size: 1.5rem;"></i> Wishlist in Auction</h3>
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            @foreach($data['wishlistAuctions'] as $auc)
-                                @php $aucCard = $data['auctionCards'][$auc->cardID] ?? null; @endphp
-                                <div style="background: rgba(0,0,0,0.2); border-radius: 8px; text-align: center; overflow: hidden; border: 1px solid var(--glass-border);">
-                                    <div style="padding: 1rem;">
-                                        @if($aucCard)
-                                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $aucCard->displayName ?? $aucCard->cardName }}</h4>
-                                            <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.8rem;">{{ str_repeat('⭐', $aucCard->rarity ?? 1) }}</div>
-                                        @else
-                                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1.1rem;">Card #{{ $auc->cardID }}</h4>
-                                        @endif
-                                        <div style="font-weight: bold; color: #f59e0b; font-size: 1.2rem; display: flex; justify-content: center; align-items: center; gap: 0.3rem;">
-                                            {{ number_format($auc->highBid ?? $auc->price ?? 0) }} 🍅
-                                        </div>
-                                    </div>
-                                    <div style="background: rgba(245, 158, 11, 0.1); padding: 0.5rem; font-size: 0.85rem; color: #fcd34d; font-weight: bold;">
-                                        Ends {{ \Carbon\Carbon::parse($auc->expires)->diffForHumans() }}
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
-            </div>
-
-            <!-- Right Column: Quests & Transactions -->
-            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                <div class="glass-panel" style="padding: 1.5rem;">
-                    <h3 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-scroll" style="color: #ec4899; font-size: 1.5rem;"></i> Active Quests</h3>
-                    @if(count($data['quests']) > 0)
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            @foreach($data['quests'] as $quest)
-                                <div style="background: rgba(0,0,0,0.2); padding: 1.2rem; border-radius: 8px; border-left: 4px solid #ec4899;">
-                                    <div style="font-weight: bold; text-transform: uppercase; font-size: 1rem; color: #ec4899; letter-spacing: 1px;">{{ str_replace('_', ' ', $quest->type ?? 'Quest') }}</div>
-                                    <div style="font-size: 1.1rem; margin-top: 0.5rem;">ID: {{ $quest->questID }}</div>
-                                    <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.8rem; display: flex; align-items: center; gap: 0.3rem; background: rgba(236,72,153,0.1); padding: 0.4rem; border-radius: 4px; display: inline-flex;">
-                                        <i class="ph ph-clock"></i> Expires: {{ \Carbon\Carbon::parse($quest->expires)->diffForHumans() }}
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <div style="text-align: center; padding: 4rem 0; opacity: 0.6;">
-                            <i class="ph-light ph-check-circle" style="font-size: 4rem; margin-bottom: 1rem;"></i>
-                            <p style="margin: 0; font-size: 1.1rem;">No active quests right now. You're all caught up!</p>
-                        </div>
-                    @endif
-                </div>
-
-                <div class="glass-panel" style="padding: 1.5rem; opacity: 0.8;">
+            <!-- Transactions -->
+            <div class="glass-panel" style="break-inside: avoid; margin-bottom: 1.5rem; padding: 1.5rem; opacity: 0.8;">
                     <h3 style="margin: 0 0 1.5rem 0; display: flex; align-items: center; gap: 0.5rem; font-size: 1.1rem;"><i class="ph-fill ph-arrows-left-right" style="color: var(--text-secondary); font-size: 1.3rem;"></i> Recent Transactions</h3>
                     @if(count($data['transactions']) > 0)
                         <div style="display: flex; flex-direction: column; gap: 0.8rem;">
@@ -417,8 +352,105 @@ new #[Layout('layouts.app')] class extends Component
                         </div>
                     @endif
                 </div>
+            </div>
+
+            <!-- Right Column -->
+            <div style="flex: 1 1 350px; display: flex; flex-direction: column;">
+
+            <!-- Quests -->
+            <div class="glass-panel" style="break-inside: avoid; margin-bottom: 1.5rem; padding: 1.5rem;">
+                    <h3 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-scroll" style="color: #ec4899; font-size: 1.5rem;"></i> Active Quests</h3>
+                    @if(count($data['quests']) > 0)
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            @foreach($data['quests'] as $quest)
+                                <div style="background: rgba(0,0,0,0.2); padding: 1.2rem; border-radius: 8px; border-left: 4px solid #ec4899;">
+                                    <div style="font-weight: bold; text-transform: uppercase; font-size: 1rem; color: #ec4899; letter-spacing: 1px;">{{ str_replace('_', ' ', $quest->type ?? 'Quest') }}</div>
+                                    <div style="font-size: 1.1rem; margin-top: 0.5rem;">ID: {{ $quest->questID }}</div>
+                                    <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.8rem; display: flex; align-items: center; gap: 0.3rem; background: rgba(236,72,153,0.1); padding: 0.4rem; border-radius: 4px; display: inline-flex;">
+                                        <i class="ph ph-clock"></i> Expires: {{ \Carbon\Carbon::parse($quest->expires)->diffForHumans() }}
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div style="text-align: center; padding: 4rem 0; opacity: 0.6;">
+                            <i class="ph-light ph-check-circle" style="font-size: 4rem; margin-bottom: 1rem;"></i>
+                            <p style="margin: 0; font-size: 1.1rem;">No active quests right now. You're all caught up!</p>
+                        </div>
+                    @endif
+                </div>
+
+            <!-- Plots -->
+            <div class="glass-panel" style="break-inside: avoid; margin-bottom: 1.5rem; padding: 1.5rem;">
+                    <h3 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-house-line" style="color: #eab308; font-size: 1.5rem;"></i> Your Plots</h3>
+                    @if(count($data['plots']) > 0)
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            @foreach($data['plots'] as $plot)
+                                @php
+                                    $lemons = $plot->building['storedLemons'] ?? 0;
+                                    $bID = strtolower($plot->building['buildingID'] ?? '');
+                                    $bIcon = match(true) {
+                                        str_contains($bID, 'farm') || str_contains($bID, 'lemon') => 'ph-plant',
+                                        str_contains($bID, 'mine') => 'ph-pickaxe',
+                                        str_contains($bID, 'bank') || str_contains($bID, 'vault') => 'ph-bank',
+                                        str_contains($bID, 'factory') => 'ph-factory',
+                                        str_contains($bID, 'shop') || str_contains($bID, 'store') => 'ph-storefront',
+                                        default => 'ph-house'
+                                    };
+                                @endphp
+                                <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                                            <i class="ph-fill {{ $bIcon }}" style="color: var(--accent-solid);"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: bold;">Plot #{{ $loop->iteration }}</div>
+                                            <div style="font-size: 0.9rem; color: var(--text-secondary);">LVL {{ $plot->building['level'] ?? 1 }} {{ $plot->building['buildingID'] ?? 'Building' }}</div>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: bold; font-size: 1.1rem;">
+                                        {{ $lemons }} 🍋
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div style="text-align: center; padding: 2rem 0; opacity: 0.6;">
+                            <i class="ph-light ph-plant" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                            <p style="margin: 0;">You don't have any plots yet.</p>
+                        </div>
+                    @endif
+                </div>
+                
+            @if(count($data['wishlistAuctions']) > 0)
+                <div class="glass-panel" style="break-inside: avoid; margin-bottom: 1.5rem; padding: 1.5rem;">
+                        <h3 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-gavel" style="color: #f59e0b; font-size: 1.5rem;"></i> Wishlist in Auction</h3>
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            @foreach($data['wishlistAuctions'] as $auc)
+                                @php $aucCard = $data['auctionCards'][$auc->cardID] ?? null; @endphp
+                                <div style="background: rgba(0,0,0,0.2); border-radius: 8px; text-align: center; overflow: hidden; border: 1px solid var(--glass-border);">
+                                    <div style="padding: 1rem;">
+                                        @if($aucCard)
+                                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $aucCard->displayName ?? $aucCard->cardName }}</h4>
+                                            <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.8rem;">{{ str_repeat('⭐', $aucCard->rarity ?? 1) }}</div>
+                                        @else
+                                            <h4 style="margin: 0 0 0.5rem 0; font-size: 1.1rem;">Card #{{ $auc->cardID }}</h4>
+                                        @endif
+                                        <div style="font-weight: bold; color: #f59e0b; font-size: 1.2rem; display: flex; justify-content: center; align-items: center; gap: 0.3rem;">
+                                            {{ number_format($auc->highBid ?? $auc->price ?? 0) }} 🍅
+                                        </div>
+                                    </div>
+                                    <div style="background: rgba(245, 158, 11, 0.1); padding: 0.5rem; font-size: 0.85rem; color: #fcd34d; font-weight: bold;">
+                                        Ends {{ \Carbon\Carbon::parse($auc->expires)->diffForHumans() }}
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
 
             </div>
+        </div>
         </div>
     @else
         <div class="glass-panel" style="padding: 3rem; text-align: center; margin-bottom: 2rem;">
