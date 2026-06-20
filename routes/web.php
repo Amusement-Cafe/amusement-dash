@@ -2,9 +2,13 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+use Livewire\Volt\Volt;
+
+Volt::route('/', 'home-page')->name('home');
+Volt::route('/cards', 'all-cards')->name('cards.index');
+Volt::route('/claims', 'claims-page')->name('claims.index');
+Volt::route('/auctions', 'auctions-page')->name('auctions.index');
+Volt::route('/profile', 'profile-page')->name('profile.show');
 
 use App\Http\Controllers\AuthController;
 

@@ -10,7 +10,7 @@ class User extends Authenticatable
     use Notifiable;
 
     protected $connection = 'mongodb';
-    protected $collection = 'users';
+    protected $table = 'users';
 
     // In Amusement Club, the Discord user ID is stored as "userID"
     protected $fillable = [

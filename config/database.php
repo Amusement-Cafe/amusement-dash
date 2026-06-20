@@ -46,8 +46,8 @@ return [
 
         'mongodb' => [
             'driver'   => 'mongodb',
-            'dsn'      => env('DB_URI', 'mongodb://192.168.1.164:27017/amusement2'),
-            'database' => env('DB_DATABASE', 'amusement2'),
+            'dsn'      => env('DB_URI', 'mongodb://192.168.1.164:27017/amuse3'),
+            'database' => env('DB_DATABASE', 'amuse3'),
         ],
 
         'mysql' => [

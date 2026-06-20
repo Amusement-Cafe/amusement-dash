@@ -1,58 +1,35 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Amusement Club Dashboard
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A feature-rich web dashboard for the Amusement Club 3.0 Discord bot, built with Laravel and Livewire.
 
-## About Laravel
+## Overview
+Amusement Club is a Discord card trading bot using MongoDB as the primary datastore. The purpose of this dashboard is to provide a clean, visual interface for users to interact with their collections, track their progress, view trending cards, and manage their profile preferences outside of Discord.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Tech Stack
+- **Backend Framework**: Laravel
+- **Frontend Framework**: Livewire
+- **Database**: MongoDB (connecting to the bot's existing database)
+- **Authentication**: Discord OAuth2
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Core Features
+1. **Discord OAuth Login**: Users will sign in via Discord to access their personal data.
+2. **Trending Dashboard**: The home page will showcase trending cards, highlighting new additions, or cards with high ratings and ownership percentages (randomized).
+3. **Public Profile**: A web representation of the Discord `/profile` command. It displays:
+   - Basic info
+   - Card and star counts
+   - Achievements
+   - Favorite cards
+4. **Card Collection View**: A highly visual grid/list representation of the user's current cards, equipped with powerful filters (similar to `/cards`).
+5. **Active Auctions**: A dedicated page displaying currently running auctions (syncs with `/auctions`).
+6. **Personal Management**: An extended profile page allowing users to view:
+   - Inventory (`/inventory`)
+   - Plots (`/plots`)
+   - Quests (`/quest list`)
+7. **Preferences**: A settings page mimicking `/preferences` to toggle notifications and interaction flags.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
-```
-
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Design
+The design must be exceptionally premium:
+- **Dark Mode First**: Deep blacks and slate grays, accented with vibrant colors.
+- **Glassmorphism**: Frosted glass effects on modals and floating cards.
+- **Animations**: Hover effects on cards, smooth transitions between pages.
+- **Typography**: Modern, readable sans-serif fonts (e.g., Inter, Outfit).
