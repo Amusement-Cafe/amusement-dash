@@ -31,3 +31,4 @@ This project is a web dashboard for the "Amusement Club 3.0" Discord bot. It is 
 - **Preferences**: ⏳ UI to manage user preferences (Pending).
 
 9. **Currency Emojis**: Always keep tomatoes, vials, and lemons displayed as their default text emojis (`🍅`, `🧪`, `🍋`). Do not replace these specific currencies with icon libraries (like Phosphor or FontAwesome).
+10. **Livewire Component Generation**: Running `php artisan make:livewire` often generates a dummy boilerplate file with an invalid/unexpected name (e.g., inside `components/` prefixed with a lightning bolt `⚡`). To avoid bugs, **do not** use `make:livewire`. Instead, manually create new `.blade.php` files directly inside `resources/views/livewire/` with the standard Volt `<?php ... new class extends Component ... ?>` syntax.
