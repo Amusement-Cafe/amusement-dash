@@ -15,17 +15,68 @@
         <nav class="navbar animate-fade-in">
             <div class="nav-brand">Amusement Club</div>
             <div class="nav-links">
-                <a href="/" class="nav-link">Home</a>
-                <a href="{{ route('cards.index') }}" class="nav-link">All Cards</a>
-                <a href="{{ route('collections.index') }}" class="nav-link">Collections</a>
-                <a href="{{ route('auctions.index') }}" class="nav-link">Auctions</a>
+                <a href="/" class="nav-link"><i class="ph-bold ph-house" style="font-size: 1.1rem; color: #a855f7;"></i> Home</a>
+                <a href="{{ route('cards.index') }}" class="nav-link"><i class="ph-bold ph-cards" style="font-size: 1.1rem; color: #60a5fa;"></i> All Cards</a>
+                <a href="{{ route('collections.index') }}" class="nav-link"><i class="ph-bold ph-books" style="font-size: 1.1rem; color: #34d399;"></i> Collections</a>
+                <a href="{{ route('auctions.index') }}" class="nav-link"><i class="ph-bold ph-gavel" style="font-size: 1.1rem; color: #fbbf24;"></i> Auctions</a>
                 @auth
-                    <a href="{{ route('cards.index') }}?owner={{ auth()->user()->userID }}" class="nav-link">My Cards</a>
-                    <a href="{{ route('profile.show') }}" class="nav-link">Profile</a>
-                    <form action="{{ route('logout') }}" method="POST" style="display:inline;">
-                        @csrf
-                        <button type="submit" class="btn btn-primary" style="background: rgba(239, 68, 68, 0.8);">Logout</button>
-                    </form>
+                    @php
+                        $user = auth()->user();
+                        $avatarIndex = is_numeric($user->userID) ? (substr($user->userID, -1) % 6) : 0;
+                        $defaultAvatar = "https://cdn.discordapp.com/embed/avatars/{$avatarIndex}.png";
+                        $avatarUrl = \Illuminate\Support\Facades\Cache::remember('discord_avatar_' . $user->userID, 86400, function() use ($user, $defaultAvatar) {
+                            $botToken = env('DISCORD_BOT_TOKEN');
+                            if (!$botToken) return $defaultAvatar;
+                            $response = \Illuminate\Support\Facades\Http::withHeaders(['Authorization' => "Bot {$botToken}"])->get("https://discord.com/api/users/{$user->userID}");
+                            if ($response->successful() && !empty($response->json('avatar'))) {
+                                $hash = $response->json('avatar');
+                                $ext = str_starts_with($hash, 'a_') ? 'gif' : 'png';
+                                return "https://cdn.discordapp.com/avatars/{$user->userID}/{$hash}.{$ext}?size=256";
+                            }
+                            return $defaultAvatar;
+                        });
+                        $incomingTx = \Illuminate\Support\Facades\DB::connection('mongodb')->table('transactions')->where('toID', $user->userID)->where('status', 'pending')->count();
+                    @endphp
+                    <div x-data="{ open: false }" style="position: relative;">
+                        <button @click="open = !open" @click.away="open = false" style="background: transparent; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.8rem; padding: 0.3rem 0.8rem; border-radius: 20px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                            <img src="{{ $avatarUrl }}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-solid);">
+                            <span style="color: white; font-weight: bold; font-family: inherit;">{{ $user->username }}</span>
+                            <i class="ph-bold ph-caret-down" style="color: var(--text-secondary); transition: transform 0.2s;" :style="{ transform: open ? 'rotate(180deg)' : 'none' }"></i>
+                        </button>
+                        
+                        <div x-show="open" x-transition.opacity.duration.200ms style="display: none; position: absolute; top: 100%; right: 0; margin-top: 0.5rem; background: rgba(20, 20, 30, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); min-width: 220px; z-index: 1000; overflow: hidden; padding: 0.5rem;">
+                            
+                            <a href="{{ route('profile.show') }}" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1rem; color: white; text-decoration: none; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                <i class="ph-fill ph-user" style="color: var(--accent-solid); font-size: 1.2rem;"></i> Profile
+                            </a>
+                            
+                            <a href="{{ route('cards.index') }}?owner={{ $user->userID }}" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1rem; color: white; text-decoration: none; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                <i class="ph-fill ph-cards" style="color: #60a5fa; font-size: 1.2rem;"></i> My Cards
+                            </a>
+                            
+                            <a href="#" style="display: flex; align-items: center; justify-content: space-between; padding: 0.8rem 1rem; color: white; text-decoration: none; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                <div style="display: flex; align-items: center; gap: 0.8rem;">
+                                    <i class="ph-fill ph-arrows-left-right" style="color: #34d399; font-size: 1.2rem;"></i> Transactions
+                                </div>
+                                @if($incomingTx > 0)
+                                    <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.7rem; padding: 2px 6px; border-radius: 12px; font-weight: bold;">{{ $incomingTx }}</span>
+                                @endif
+                            </a>
+                            
+                            <a href="#" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1rem; color: white; text-decoration: none; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                <i class="ph-fill ph-gear" style="color: #a855f7; font-size: 1.2rem;"></i> Preferences
+                            </a>
+                            
+                            <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0.5rem 0;"></div>
+                            
+                            <form action="{{ route('logout') }}" method="POST" style="margin: 0;">
+                                @csrf
+                                <button type="submit" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1rem; color: #ef4444; background: transparent; border: none; width: 100%; text-align: left; border-radius: 8px; cursor: pointer; transition: background 0.2s; font-size: 1rem; font-family: inherit;" onmouseover="this.style.background='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.background='transparent'">
+                                    <i class="ph-bold ph-sign-out" style="font-size: 1.2rem;"></i> Logout
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 @else
                     <a href="{{ route('login.discord') }}" class="btn btn-primary">Sign In with Discord</a>
                 @endauth
