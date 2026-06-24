@@ -1,5 +1,19 @@
 @props(['cards', 'collections' => [], 'userOwned' => [], 'userFavs' => [], 'userWishlists' => []])
 
+@php
+    $contributorIds = [];
+    foreach ($cards as $card) {
+        $meta = (array) ($card->meta ?? []);
+        if (!empty($meta['contributor'])) {
+            $contributorIds[] = (string) $meta['contributor'];
+        }
+    }
+    $contributorIds = array_unique($contributorIds);
+    $contributors = [];
+    if (!empty($contributorIds)) {
+        $contributors = \App\Models\User::whereIn('userID', $contributorIds)->pluck('username', 'userID')->toArray();
+    }
+@endphp
 <div x-data="{ 
     showModal: false, 
     selectedCard: null,
@@ -46,7 +60,9 @@
                     'owned' => $owned,
                     'userCopies' => $owned ? (int)$owned : 0,
                     'fav' => $fav,
-                    'wishlisted' => $wishlisted
+                    'wishlisted' => $wishlisted,
+                    'meta' => $card->meta ?? null,
+                    'contributorName' => !empty(((array)($card->meta ?? []))['contributor']) ? ($contributors[(string)(((array)($card->meta ?? []))['contributor'])] ?? null) : null
                 ];
             @endphp
             <div @click="openModal({{ json_encode($cardData) }})" style="cursor: pointer;">
@@ -141,6 +157,42 @@
                         </div>
                     </div>
                     
+                    <template x-if="selectedCard?.meta && Object.keys(selectedCard.meta).length > 0 && Object.values(selectedCard.meta).some(v => v !== null && v !== undefined && v !== '')">
+                        <div style="margin-top: 1rem;">
+                            <h4 style="margin: 0 0 0.5rem 0; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="ph-fill ph-info"></i> Metadata
+                            </h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem;">
+                                <template x-for="(value, key) in selectedCard.meta" :key="key">
+                                    <template x-if="value !== null && value !== undefined && value !== ''">
+                                        <div class="glass-panel" style="padding: 0.5rem; border: 1px dashed var(--glass-border); border-radius: 8px;">
+                                            <p style="color: var(--text-secondary); font-size: 0.8rem; margin: 0; text-transform: capitalize;" x-text="key.replace(/([A-Z])/g, ' $1').trim()"></p>
+                                            
+                                            <template x-if="key === 'contributor'">
+                                                <p style="font-size: 0.95rem; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                    <a :href="'{{ route('profile.show') }}?id=' + value" style="color: var(--accent-solid); text-decoration: none;">
+                                                        <span x-text="selectedCard.contributorName ? selectedCard.contributorName : value"></span>
+                                                    </a>
+                                                </p>
+                                            </template>
+                                            
+                                            <template x-if="key !== 'contributor' && typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://'))">
+                                                <p style="font-size: 0.95rem; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                    <a :href="value" target="_blank" style="color: var(--accent-solid); text-decoration: none; display: flex; align-items: center; gap: 0.2rem;">
+                                                        Link <i class="ph-bold ph-arrow-square-out" style="font-size: 0.9em;"></i>
+                                                    </a>
+                                                </p>
+                                            </template>
+                                            <template x-if="key !== 'contributor' && !(typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://')))">
+                                                <p style="font-size: 0.95rem; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" x-text="value" :title="value"></p>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                    
                     <div style="margin-top: 1rem;">
                         <h4 style="margin: 0 0 0.5rem 0; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
                             <i class="ph-fill ph-tag"></i> Tags
@@ -177,6 +229,17 @@
                                 <i class="ph-bold ph-heart"></i> Set as Profile Fav
                             </button>
                         </template>
+
+                        @php
+                            $userRoles = auth()->user()->roles;
+                            if (!is_array($userRoles)) $userRoles = [];
+                            $isCardEditor = count(array_intersect(array_map('strtolower', $userRoles), ['metamod', 'tagmod', 'admin'])) > 0;
+                        @endphp
+                        @if($isCardEditor)
+                            <a :href="'/card-editor?cardId=' + selectedCard?.cardID" style="margin-top: 1rem; width: 100%; padding: 0.8rem; background: rgba(59, 130, 246, 0.1); border: 1px dashed #3b82f6; color: #3b82f6; border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none;" onmouseover="this.style.background='rgba(59, 130, 246, 0.2)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.1)'">
+                                <i class="ph-bold ph-pencil-simple"></i> Edit Card Information
+                            </a>
+                        @endif
                     @endauth
                 </div>
             </div>
