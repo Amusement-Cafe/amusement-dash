@@ -59,6 +59,20 @@ new #[Layout('layouts.app')] class extends Component
         $this->resetPage();
     }
     
+    public function clearFilters()
+    {
+        $this->search = '';
+        $this->rarity = '';
+        $this->collectionID = '';
+        $this->tags = [];
+        $this->tagInput = '';
+        $this->filterOwned = '';
+        $this->filterFav = '';
+        $this->filterWish = '';
+        $this->hidePromos = false;
+        $this->resetPage();
+    }
+    
     #[Url]
     public string $sortBy = 'rarity';
     
@@ -136,8 +150,11 @@ new #[Layout('layouts.app')] class extends Component
         if ($this->search) {
             $query->where(function($q) {
                 $q->where('cardName', 'like', '%' . $this->search . '%')
-                  ->orWhere('displayName', 'like', '%' . $this->search . '%')
-                  ->orWhere('cardID', (int)$this->search);
+                  ->orWhere('displayName', 'like', '%' . $this->search . '%');
+                  
+                if (is_numeric($this->search)) {
+                    $q->orWhere('cardID', (int)$this->search);
+                }
             });
         }
 

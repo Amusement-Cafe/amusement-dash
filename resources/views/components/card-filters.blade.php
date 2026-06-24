@@ -9,6 +9,9 @@
                 <span style="background: rgba(236, 72, 153, 0.2); color: #f472b6; font-size: 0.8rem; padding: 2px 8px; border-radius: 12px; margin-left: 0.5rem; border: 1px solid rgba(236, 72, 153, 0.3); font-weight: 600;">
                     {{ $activeFiltersCount }} Active
                 </span>
+                <button @click.stop wire:click="clearFilters" style="background: rgba(255, 255, 255, 0.1); border: 1px solid var(--glass-border); color: var(--text-secondary); font-size: 0.8rem; padding: 2px 8px; border-radius: 8px; cursor: pointer; transition: all 0.2s; margin-left: 0.5rem;" onmouseover="this.style.background='rgba(255, 255, 255, 0.2)'; this.style.color='white'" onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'; this.style.color='var(--text-secondary)'">
+                    Clear all
+                </button>
             @endif
         </h3>
         <i class="ph-bold ph-caret-down" :style="{ transform: open ? 'rotate(180deg)' : 'none' }" style="transition: transform 0.3s; font-size: 1.2rem; color: var(--text-secondary);"></i>
