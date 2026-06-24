@@ -43,6 +43,18 @@ new #[Layout('layouts.app')] class extends Component
     #[Url]
     public string $claimID = '';
 
+    public $randomSeed;
+
+    public function mount()
+    {
+        $this->randomSeed = session()->get('cards_random_seed', mt_rand());
+        session()->put('cards_random_seed', $this->randomSeed);
+        
+        if ($this->search !== '' && $this->sortBy === 'random') {
+            $this->sortBy = 'rarity';
+        }
+    }
+
     public function addTag()
     {
         $input = strtolower(trim($this->tagInput));
@@ -74,7 +86,7 @@ new #[Layout('layouts.app')] class extends Component
     }
     
     #[Url]
-    public string $sortBy = 'rarity';
+    public string $sortBy = 'random';
     
     #[Url]
     public $sortDesc = true;
@@ -101,6 +113,16 @@ new #[Layout('layouts.app')] class extends Component
         if (in_array($property, ['search', 'rarity', 'collectionID', 'sortBy', 'sortDesc', 'owner', 'hidePromos', 'filterOwned', 'filterFav', 'filterWish', 'transactionID', 'claimID'])) {
             $this->resetPage();
         }
+        
+        if ($property === 'search' && $this->search !== '' && $this->sortBy === 'random') {
+            $this->sortBy = 'rarity';
+        }
+        
+        if ($property === 'sortBy' && $this->sortBy === 'random') {
+            $this->randomSeed = mt_rand();
+            session()->put('cards_random_seed', $this->randomSeed);
+        }
+        
         $this->dispatch('scroll-to-top');
     }
 
@@ -240,8 +262,33 @@ new #[Layout('layouts.app')] class extends Component
             }
         }
 
-        $query->orderBy($this->sortBy, $this->sortDesc ? 'desc' : 'asc')->orderBy('cardID', 'asc');
-        $cards = $query->paginate(24);
+        if ($this->sortBy === 'random') {
+            $cardIDs = $query->pluck('cardID')->toArray();
+            mt_srand($this->randomSeed ?? mt_rand());
+            shuffle($cardIDs);
+            mt_srand();
+            
+            $page = $this->getPage();
+            $perPage = 24;
+            $slicedIds = array_slice($cardIDs, ($page - 1) * $perPage, $perPage);
+            
+            if (empty($slicedIds)) {
+                $cards = new \Illuminate\Pagination\LengthAwarePaginator(collect(), count($cardIDs), $perPage, $page, [
+                    'path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(),
+                ]);
+            } else {
+                $fetchedCards = Card::whereIn('cardID', $slicedIds)->get()->sortBy(function($card) use ($slicedIds) {
+                    return array_search($card->cardID, $slicedIds);
+                })->values();
+                
+                $cards = new \Illuminate\Pagination\LengthAwarePaginator($fetchedCards, count($cardIDs), $perPage, $page, [
+                    'path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(),
+                ]);
+            }
+        } else {
+            $query->orderBy($this->sortBy, $this->sortDesc ? 'desc' : 'asc')->orderBy('cardID', 'asc');
+            $cards = $query->paginate(24);
+        }
 
         $userOwned = [];
         $userFavs = [];

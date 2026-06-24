@@ -35,7 +35,6 @@
                         <option value="3">3 Stars</option>
                         <option value="4">4 Stars</option>
                         <option value="5">5 Stars</option>
-                        <option value="6">6 Stars (Promo)</option>
                     </select>
                 </div>
 
@@ -55,6 +54,7 @@
                 <div style="min-width: 150px;">
                     <label style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.3rem; display: block;"><i class="ph-fill ph-sort-ascending"></i> Sort By</label>
                     <select wire:model.live="sortBy" class="input-glass" style="width: 100%;">
+                        <option value="random">Random Order</option>
                         <option value="cardID">ID</option>
                         <option value="rarity">Rarity</option>
                         <option value="added">Date Added</option>
