@@ -23,6 +23,7 @@
                 <a href="{{ route('cards.index') }}" class="nav-link"><i class="ph-bold ph-cards" style="font-size: 1.1rem; color: #60a5fa;"></i> All Cards</a>
                 <a href="{{ route('collections.index') }}" class="nav-link"><i class="ph-bold ph-books" style="font-size: 1.1rem; color: #34d399;"></i> Collections</a>
                 <a href="{{ route('auctions.index') }}" class="nav-link"><i class="ph-bold ph-gavel" style="font-size: 1.1rem; color: #fbbf24;"></i> Auctions</a>
+                <a href="{{ route('leaderboards.index') }}" class="nav-link"><i class="ph-bold ph-trophy" style="font-size: 1.1rem; color: #eab308;"></i> Leaderboards</a>
                 @auth
                     <a href="{{ route('heroes.index') }}" class="nav-link"><i class="ph-bold ph-mask-happy" style="font-size: 1.1rem; color: #ec4899;"></i> Heroes</a>
                     @php
