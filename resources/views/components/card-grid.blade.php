@@ -1,4 +1,4 @@
-@props(['cards', 'collections' => [], 'userOwned' => [], 'userFavs' => [], 'userWishlists' => []])
+@props(['cards', 'collections' => [], 'userOwned' => [], 'userFavs' => [], 'userWishlists' => [], 'cardAuctions' => []])
 
 @php
     $contributorIds = [];
@@ -19,6 +19,11 @@
     selectedCard: null,
     tags: [],
     tagsLoading: false,
+    init() {
+        this.$watch('showModal', value => {
+            document.body.style.overflow = value ? 'hidden' : '';
+        });
+    },
     openModal(cardData) {
         this.selectedCard = cardData;
         this.showModal = true;
@@ -34,8 +39,48 @@
                 this.tagsLoading = false;
                 console.error(err);
             });
+    },
+    handleCardUpdate(e) {
+        if (this.selectedCard && this.selectedCard.cardID == e.detail.cardId) {
+            if (e.detail.type === 'fav') this.selectedCard.fav = e.detail.value;
+            if (e.detail.type === 'wishlist') this.selectedCard.wishlisted = e.detail.value;
+        }
+    },
+    createBurst(event, iconClass, color) {
+        const btn = event.currentTarget;
+        const rect = btn.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        
+        for (let i = 0; i < 10; i++) {
+            const icon = document.createElement('i');
+            icon.className = iconClass;
+            icon.style.position = 'fixed';
+            icon.style.left = x + 'px';
+            icon.style.top = y + 'px';
+            icon.style.color = color;
+            icon.style.fontSize = '1.2rem';
+            icon.style.pointerEvents = 'none';
+            icon.style.zIndex = '9999';
+            icon.style.transition = 'all 0.6s cubic-bezier(0.1, 0.8, 0.2, 1)';
+            document.body.appendChild(icon);
+            
+            const angle = (i / 10) * Math.PI * 2 + (Math.random() * 0.2);
+            const velocity = 40 + Math.random() * 50;
+            const tx = Math.cos(angle) * velocity;
+            const ty = Math.sin(angle) * velocity - 20;
+            
+            setTimeout(() => {
+                icon.style.transform = `translate(${tx}px, ${ty}px) scale(0) rotate(${Math.random() * 180 - 90}deg)`;
+                icon.style.opacity = '0';
+            }, 10);
+            
+            setTimeout(() => {
+                icon.remove();
+            }, 600);
+        }
     }
-}">
+}" @card-updated.window="handleCardUpdate($event)">
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
         @foreach($cards as $card)
             @php 
@@ -61,6 +106,7 @@
                     'userCopies' => $owned ? (int)$owned : 0,
                     'fav' => $fav,
                     'wishlisted' => $wishlisted,
+                    'auctionPrice' => isset($cardAuctions[$card->cardID]) ? $cardAuctions[$card->cardID]->price : null,
                     'meta' => $card->meta ?? null,
                     'contributorName' => !empty(((array)($card->meta ?? []))['contributor']) ? ($contributors[(string)(((array)($card->meta ?? []))['contributor'])] ?? null) : null
                 ];
@@ -79,6 +125,54 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
+        
+        .card-action-icon-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer !important;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            flex-shrink: 0;
+            backdrop-filter: blur(10px);
+            outline: none;
+        }
+        .card-action-icon-btn:hover {
+            transform: scale(1.15);
+            filter: brightness(1.25);
+        }
+        .card-action-icon-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .card-action-text-btn {
+            flex: 1;
+            height: 48px;
+            padding: 0 1.5rem;
+            border-radius: 16px;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer !important;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            backdrop-filter: blur(10px);
+            text-decoration: none;
+            outline: none;
+        }
+        .card-action-text-btn:hover {
+            transform: scale(1.05);
+            filter: brightness(1.2);
+        }
+        .card-action-text-btn:active {
+            transform: scale(0.98);
+        }
     </style>
 
     <!-- Modal using Alpine -->
@@ -89,7 +183,7 @@
                     <button @click="showModal = false" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
                     
                     <!-- Left Side: Image -->
-                    <div style="flex: 1; min-width: 300px; display: flex; align-items: flex-start; justify-content: center; background: transparent; border-radius: 8px; padding: 1rem; position: sticky; top: 0;">
+                    <div style="flex: 1; min-width: 300px; display: flex; align-items: flex-start; justify-content: center; background: transparent; border-radius: 8px; padding: 1rem; position: sticky; top: 0; align-self: flex-start;">
                     <template x-if="selectedCard?.cardURL">
                         <img :src="selectedCard.cardURL" :alt="selectedCard.displayName" style="max-width: 100%; max-height: 500px; object-fit: contain;">
                     </template>
@@ -102,22 +196,79 @@
                 <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: center;">
                     <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.5rem;">
                         <h2 style="font-size: 2rem; margin: 0;" x-text="selectedCard?.displayName"></h2>
-                        <div style="display: flex; gap: 0.5rem;">
+                        <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
                             <template x-if="selectedCard?.owned">
-                                <i class="ph-fill ph-check-circle" title="Owned" style="color: #34d399; font-size: 1.8rem; display: flex; align-items: center; justify-content: center; background: rgba(16, 185, 129, 0.2); border-radius: 50%; padding: 4px;"></i>
+                                <div title="Owned" style="display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: 0.5rem;">
+                                    <i class="ph-fill ph-check-circle" style="color: #34d399; font-size: 1.6rem; filter: drop-shadow(0 2px 5px rgba(52, 211, 153, 0.3));"></i>
+                                </div>
                             </template>
-                            <template x-if="selectedCard?.fav">
-                                <i class="ph-fill ph-heart" title="Favorited" style="color: #f472b6; font-size: 1.8rem; display: flex; align-items: center; justify-content: center; background: rgba(236, 72, 153, 0.2); border-radius: 50%; padding: 4px;"></i>
-                            </template>
-                            <template x-if="selectedCard?.wishlisted">
-                                <i class="ph-fill ph-star" title="Wishlisted" style="color: #fbbf24; font-size: 1.8rem; display: flex; align-items: center; justify-content: center; background: rgba(245, 158, 11, 0.2); border-radius: 50%; padding: 4px;"></i>
-                            </template>
+                            
+                            @auth
+                                <template x-if="selectedCard?.userCopies > 0">
+                                    <button @click="$dispatch('toggle-fav', { cardId: selectedCard.cardID }); if(!selectedCard.fav) createBurst($event, 'ph-fill ph-heart', '#ec4899');" 
+                                            title="Favorite"
+                                            class="card-action-icon-btn"
+                                            style="padding: 0;"
+                                            :style="selectedCard?.fav ? 'background: rgba(236, 72, 153, 0.2); border-color: rgba(236, 72, 153, 0.5); color: #ec4899; box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);' : 'background: rgba(0, 0, 0, 0.4); border-color: rgba(255,255,255,0.1); color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.3);'">
+                                        <i class="ph-bold ph-heart" :class="selectedCard?.fav ? 'ph-fill' : ''" style="font-size: 1.4rem;"></i> 
+                                    </button>
+                                </template>
+                                
+                                <template x-if="!selectedCard || selectedCard?.userCopies <= 0">
+                                    <button @click="$dispatch('toggle-wishlist', { cardId: selectedCard.cardID }); if(!selectedCard.wishlisted) createBurst($event, 'ph-fill ph-star', '#fbbf24');" 
+                                            title="Wishlist"
+                                            class="card-action-icon-btn"
+                                            style="padding: 0;"
+                                            :style="selectedCard?.wishlisted ? 'background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.5); color: #fbbf24; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);' : 'background: rgba(0, 0, 0, 0.4); border-color: rgba(255,255,255,0.1); color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.3);'">
+                                        <i class="ph-bold ph-star" :class="selectedCard?.wishlisted ? 'ph-fill' : ''" style="font-size: 1.4rem;"></i> 
+                                    </button>
+                                </template>
+                            @else
+                                <template x-if="selectedCard?.fav">
+                                    <div title="Favorited" class="card-action-icon-btn" style="background: rgba(236, 72, 153, 0.2); border: 1px solid transparent;">
+                                        <i class="ph-fill ph-heart" style="color: #f472b6; font-size: 1.4rem;"></i>
+                                    </div>
+                                </template>
+                                <template x-if="selectedCard?.wishlisted">
+                                    <div title="Wishlisted" class="card-action-icon-btn" style="background: rgba(245, 158, 11, 0.2); border: 1px solid transparent;">
+                                        <i class="ph-fill ph-star" style="color: #fbbf24; font-size: 1.4rem;"></i>
+                                    </div>
+                                </template>
+                            @endauth
                         </div>
                     </div>
                     
                     <p style="color: var(--text-secondary); font-size: 1.2rem; margin-bottom: 1.5rem;">
                         <span x-text="'⭐'.repeat(selectedCard?.rarity || 1)"></span> | ID: #<span x-text="selectedCard?.cardID"></span>
                     </p>
+                    
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                        @auth
+                            <template x-if="selectedCard?.userCopies > 0 && selectedCard?.fav">
+                                <div style="display: flex; gap: 1rem; width: 100%;">
+                                    <button @click="$dispatch('set-profile-fav', { cardId: selectedCard.cardID })" 
+                                            class="card-action-text-btn"
+                                            style="background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.5); color: #60a5fa; box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);">
+                                        <i class="ph-bold ph-user" style="font-size: 1.4rem;"></i> Set as Profile Fav
+                                    </button>
+                                </div>
+                            </template>
+                            
+                            <template x-if="(!selectedCard || selectedCard?.userCopies <= 0) && selectedCard?.auctionPrice">
+                                <div style="display: flex; gap: 1rem; width: 100%;">
+                                    <a href="/auctions" 
+                                       class="card-action-text-btn"
+                                       style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.5); color: #10b981; box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);">
+                                        <i class="ph-bold ph-gavel" style="font-size: 1.4rem;"></i> View Auction (<span x-text="selectedCard?.auctionPrice"></span> 🍅)
+                                    </a>
+                                </div>
+                            </template>
+                        @else
+                            <div style="width: 100%; padding: 1rem; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(10px); border: 1px dashed var(--glass-border); border-radius: 12px; text-align: center; color: var(--text-secondary); box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">
+                                <a href="{{ route('login.discord') }}" style="color: var(--accent-solid); text-decoration: none; font-weight: bold;">Sign in</a> for more actions like favorite and wishlist.
+                            </div>
+                        @endauth
+                    </div>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
                         <div class="glass-panel" style="padding: 1rem; border: 1px dashed var(--glass-border);">
@@ -224,11 +375,6 @@
                     </div>
                     
                     @auth
-                        <template x-if="selectedCard?.userCopies > 0">
-                            <button @click="$dispatch('set-profile-fav', { cardId: selectedCard.cardID })" style="margin-top: 1.5rem; width: 100%; padding: 0.8rem; background: rgba(236, 72, 153, 0.1); border: 1px solid #ec4899; color: #ec4899; border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" onmouseover="this.style.background='rgba(236, 72, 153, 0.2)'" onmouseout="this.style.background='rgba(236, 72, 153, 0.1)'">
-                                <i class="ph-bold ph-heart"></i> Set as Profile Fav
-                            </button>
-                        </template>
 
                         @php
                             $userRoles = auth()->user()->roles;

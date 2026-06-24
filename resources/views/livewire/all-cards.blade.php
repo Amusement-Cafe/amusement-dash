@@ -8,6 +8,7 @@ use App\Models\UserCard;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
+use Livewire\Attributes\On;
 
 new #[Layout('layouts.app')] class extends Component
 {
@@ -73,6 +74,12 @@ new #[Layout('layouts.app')] class extends Component
     public function updatingPage()
     {
         $this->dispatch('scroll-to-top');
+    }
+
+    #[On('card-updated')]
+    public function refreshCardData()
+    {
+        // Triggers a re-render to update the grid with fresh database state
     }
 
     public function updated($property)
@@ -253,12 +260,25 @@ new #[Layout('layouts.app')] class extends Component
         if ($this->filterFav !== '') $activeFiltersCount++;
         if ($this->filterWish !== '') $activeFiltersCount++;
 
+        $activeAuctions = \App\Models\Auction::where('ended', false)
+            ->where('cancelled', false)
+            ->whereIn('cardID', $cards->pluck('cardID'))
+            ->get();
+            
+        $cardAuctions = [];
+        foreach ($activeAuctions as $auction) {
+            if (!isset($cardAuctions[$auction->cardID]) || $cardAuctions[$auction->cardID]->price > $auction->price) {
+                $cardAuctions[$auction->cardID] = $auction;
+            }
+        }
+
         return [
             'cards' => $cards,
             'collections' => $collections,
             'userOwned' => $userOwned,
             'userFavs' => $userFavs,
             'userWishlists' => $userWishlists,
+            'cardAuctions' => $cardAuctions,
             'ownerUser' => $ownerUser,
             'ownerAvatar' => $ownerAvatar,
             'activeFiltersCount' => $activeFiltersCount
@@ -289,7 +309,7 @@ new #[Layout('layouts.app')] class extends Component
     <x-card-filters :collections="$collections" :tags="$tags" :sortDesc="$sortDesc" :hidePromos="$hidePromos" :activeFiltersCount="$activeFiltersCount" />
     
     <div wire:loading.remove>
-        <x-card-grid :cards="$cards" :collections="$collections" :userOwned="$userOwned" :userFavs="$userFavs" :userWishlists="$userWishlists" />
+        <x-card-grid :cards="$cards" :collections="$collections" :userOwned="$userOwned" :userFavs="$userFavs" :userWishlists="$userWishlists" :cardAuctions="$cardAuctions" />
     </div>
     
     <div wire:loading style="width: 100%;">
