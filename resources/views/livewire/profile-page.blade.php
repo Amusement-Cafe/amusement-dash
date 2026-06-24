@@ -8,6 +8,7 @@ use App\Models\Card;
 use App\Models\BotCollection;
 use App\Models\UserWishlist;
 use App\Models\UserCard;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Layout;
 
 new #[Layout('layouts.app')] class extends Component
@@ -55,23 +56,39 @@ new #[Layout('layouts.app')] class extends Component
             }
         }
 
-        $wishlistCardIDs = UserWishlist::where('userID', $userIdToFetch)->pluck('cardID')->toArray();
-        $wishlistCardIDs = array_map('intval', $wishlistCardIDs);
-        
         $wishlistCards = null;
         $wishlistCollections = [];
         $userOwned = [];
         $userFavs = [];
         $userWishlists = [];
         
-        if (!empty($wishlistCardIDs)) {
-            // Ensure pagination runs
-            $wishlistCards = Card::whereIn('cardID', $wishlistCardIDs)->paginate(12);
-            $collectionIDs = collect($wishlistCards->items())->pluck('collectionID')->unique()->toArray();
+        $wishlistQuery = UserWishlist::where('userID', $userIdToFetch);
+        $totalWishlists = $wishlistQuery->count();
+        
+        if ($totalWishlists > 0) {
+            $page = $this->getPage();
+            $perPage = 12;
+            $wishlistItems = $wishlistQuery->skip(($page - 1) * $perPage)->take($perPage)->get();
+            $wishlistCardIDs = array_map('intval', $wishlistItems->pluck('cardID')->toArray());
+            
+            $fetchedCards = Card::whereIn('cardID', $wishlistCardIDs)->get()->keyBy('cardID');
+            $sortedCards = collect();
+            foreach($wishlistCardIDs as $id) {
+                if ($fetchedCards->has($id)) {
+                    $sortedCards->push($fetchedCards->get($id));
+                }
+            }
+            
+            $wishlistCards = new LengthAwarePaginator($sortedCards, $totalWishlists, $perPage, $page, [
+                'path' => request()->url(),
+                'query' => request()->query()
+            ]);
+            
+            $collectionIDs = $sortedCards->pluck('collectionID')->unique()->toArray();
             $wishlistCollections = BotCollection::whereIn('collectionID', $collectionIDs)->get()->keyBy('collectionID')->toArray();
             
             if (auth()->check()) {
-                $myCardIDs = collect($wishlistCards->items())->pluck('cardID');
+                $myCardIDs = $sortedCards->pluck('cardID');
                 
                 $userCards = UserCard::where('userID', auth()->user()->userID)
                     ->whereIn('cardID', $myCardIDs)
@@ -93,27 +110,6 @@ new #[Layout('layouts.app')] class extends Component
                 }
             }
         }
-
-        $userCardsAll = UserCard::where('userID', $userIdToFetch)->get(['cardID', 'amount']);
-        $allCardIDs = $userCardsAll->pluck('cardID')->unique()->toArray();
-        // Chunk fetching cards just in case it's huge
-        $allCards = collect();
-        foreach (array_chunk($allCardIDs, 500) as $chunk) {
-            $allCards = $allCards->merge(Card::whereIn('cardID', $chunk)->get(['cardID', 'rarity', 'eval']));
-        }
-        $allCards = $allCards->keyBy('cardID');
-
-        $totalStars = 0;
-        $totalEval = 0;
-        foreach ($userCardsAll as $uc) {
-            $c = $allCards->get($uc->cardID);
-            if ($c) {
-                $amount = $uc->amount ?? 1;
-                $totalStars += ($c->rarity ?? 1) * $amount;
-                $totalEval += ($c->eval ?? 0) * $amount;
-            }
-        }
-        $netWorth = ($userProfile->tomatoes ?? 0) + $totalEval;
 
         $cloutedColIDs = collect($userProfile->cloutedCols ?? [])->pluck('id')->toArray();
         $cloutedCollectionsList = [];
@@ -139,8 +135,6 @@ new #[Layout('layouts.app')] class extends Component
             'userOwned' => $userOwned,
             'userFavs' => $userFavs,
             'userWishlists' => $userWishlists,
-            'totalStars' => $totalStars,
-            'netWorth' => $netWorth,
             'cloutedCollectionsList' => $cloutedCollectionsList,
             'hero' => $hero,
             'heroLevel' => $heroLevel
@@ -172,6 +166,8 @@ new #[Layout('layouts.app')] class extends Component
                 $level >= 10 => '#22c55e', // Green
                 default => '#9ca3af' // Gray
             };
+            
+            $hasAmuPlus = !empty($userProfile->roles) && in_array('AmuPlus', $userProfile->roles);
 
             $avatarIndex = is_numeric($userProfile->userID) ? (substr($userProfile->userID, -1) % 6) : 0;
             $defaultAvatar = "https://cdn.discordapp.com/embed/avatars/{$avatarIndex}.png";
@@ -199,6 +195,22 @@ new #[Layout('layouts.app')] class extends Component
                 border-radius: 12px;
                 border: 1px solid var(--glass-border);
             }
+            .amuplus-gradient-border {
+                position: relative;
+                background: rgba(255,255,255,0.05);
+            }
+            .amuplus-gradient-border::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                border-radius: 9999px;
+                padding: 1.5px;
+                background: linear-gradient(135deg, #06b6d4, #a855f7);
+                -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                -webkit-mask-composite: xor;
+                mask-composite: exclude;
+                pointer-events: none;
+            }
         </style>
 
         <!-- Header Profile Banner -->
@@ -207,8 +219,8 @@ new #[Layout('layouts.app')] class extends Component
             <div style="position: absolute; top: -50px; left: 0; width: 300px; height: 300px; background: {{ $hexColor }}; filter: blur(100px); opacity: 0.2; pointer-events: none;"></div>
             
             <div style="position: relative; z-index: 10; flex-shrink: 0;">
-                <img src="{{ $avatarUrl }}" alt="Avatar" style="width: 120px; height: 120px; border-radius: 50%; border: 4px solid {{ $levelColor }}; object-fit: cover;">
-                <div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); background: {{ $levelColor }}; color: white; padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 10px rgba(0,0,0,0.5); white-space: nowrap;">
+                <img src="{{ $avatarUrl }}" alt="Avatar" style="width: 120px; height: 120px; border-radius: 50%; {{ $hasAmuPlus ? 'padding: 4px; background: linear-gradient(135deg, #06b6d4, #a855f7);' : 'border: 4px solid ' . $levelColor . ';' }} object-fit: cover;">
+                <div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); {{ $hasAmuPlus ? 'background: linear-gradient(135deg, #06b6d4, #a855f7);' : 'background: ' . $levelColor . ';' }} color: white; padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 10px rgba(0,0,0,0.5); white-space: nowrap;">
                     LVL {{ $level }}
                 </div>
             </div>
@@ -227,9 +239,15 @@ new #[Layout('layouts.app')] class extends Component
                 @if(!empty($userProfile->roles))
                     <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; z-index: 10;">
                         @foreach($userProfile->roles as $role)
-                            <span style="background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: bold; color: var(--text-primary); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
-                                {{ $role }}
-                            </span>
+                            @if($role === 'AmuPlus')
+                                <span class="amuplus-gradient-border" style="padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: bold; color: white; border: 1px solid transparent; box-shadow: 0 2px 10px rgba(0,0,0,0.2); display: inline-flex; align-items: center; justify-content: center;">
+                                    <span style="background: linear-gradient(135deg, #06b6d4, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{{ $role }}</span>
+                                </span>
+                            @else
+                                <span style="background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: bold; color: var(--text-primary); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+                                    {{ $role }}
+                                </span>
+                            @endif
                         @endforeach
                     </div>
                 @endif
@@ -288,11 +306,6 @@ new #[Layout('layouts.app')] class extends Component
                             <div style="font-size: 1.2rem; font-weight: bold;">{{ number_format($userProfile->vials ?? 0) }}</div>
                             <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Vials</div>
                         </div>
-                        <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
-                            <i class="ph-fill ph-star" style="color: #fbbf24; font-size: 2.5rem; margin-bottom: 0.5rem; display: inline-block;"></i>
-                            <div style="font-size: 1.2rem; font-weight: bold;">{{ number_format($totalStars) }}</div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Stars</div>
-                        </div>
                     </div>
                 </div>
 
@@ -303,10 +316,6 @@ new #[Layout('layouts.app')] class extends Component
                     </h2>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                        <div style="display: flex; justify-content: space-between; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <span style="color: var(--text-secondary);">Net Worth</span>
-                            <span style="font-weight: bold;">{{ number_format($netWorth) }} 🍅</span>
-                        </div>
                         <div style="display: flex; justify-content: space-between; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
                             <span style="color: var(--text-secondary);">Daily Streak</span>
                             <span style="font-weight: bold;">{{ $userProfile->streaks['daily']['count'] ?? 0 }} <i class="ph-fill ph-fire" style="color: #ef4444;"></i></span>

@@ -35,6 +35,12 @@ new #[Layout('layouts.app')] class extends Component
     
     #[Url]
     public string $filterWish = '';
+    
+    #[Url]
+    public string $transactionID = '';
+    
+    #[Url]
+    public string $claimID = '';
 
     public function addTag()
     {
@@ -71,7 +77,7 @@ new #[Layout('layouts.app')] class extends Component
 
     public function updated($property)
     {
-        if (in_array($property, ['search', 'rarity', 'collectionID', 'sortBy', 'sortDesc', 'owner', 'hidePromos', 'filterOwned', 'filterFav', 'filterWish'])) {
+        if (in_array($property, ['search', 'rarity', 'collectionID', 'sortBy', 'sortDesc', 'owner', 'hidePromos', 'filterOwned', 'filterFav', 'filterWish', 'transactionID', 'claimID'])) {
             $this->resetPage();
         }
         $this->dispatch('scroll-to-top');
@@ -139,6 +145,24 @@ new #[Layout('layouts.app')] class extends Component
 
         if ($this->collectionID !== '') {
             $query->where('collectionID', $this->collectionID);
+        }
+
+        if ($this->transactionID !== '') {
+            $tx = \App\Models\Transaction::where('transactionID', $this->transactionID)->orWhere('_id', $this->transactionID)->first();
+            if ($tx && !empty($tx->cardIDs)) {
+                $query->whereIn('cardID', $tx->cardIDs);
+            } else {
+                $query->where('cardID', -1);
+            }
+        }
+
+        if ($this->claimID !== '') {
+            $claim = \App\Models\Claim::where('claimID', $this->claimID)->orWhere('_id', $this->claimID)->first();
+            if ($claim && !empty($claim->cardIDs)) {
+                $query->whereIn('cardID', $claim->cardIDs);
+            } else {
+                $query->where('cardID', -1);
+            }
         }
 
         if (!empty($this->tags)) {

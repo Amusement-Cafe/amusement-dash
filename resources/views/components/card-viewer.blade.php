@@ -23,8 +23,11 @@
 <div class="glass-panel" style="padding: 1rem; text-align: center; border: 1px solid {{ $bColor }}; box-shadow: {{ $shadowNormal }}; position: relative; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='{{ $shadowHover }}';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='{{ $shadowNormal }}';">
     
     @if($owned)
-        <div style="position: absolute; top: 0; right: 0; background: #34d399; color: black; font-size: 0.7rem; font-weight: bold; padding: 2px 8px; border-bottom-left-radius: 8px; z-index: 10;">
-            OWNED
+        <div style="position: absolute; top: 0; right: 0; background: #34d399; color: black; font-size: 0.7rem; font-weight: bold; padding: 2px 8px; border-bottom-left-radius: 8px; z-index: 10; display: flex; flex-direction: column; align-items: center;">
+            <span>OWNED</span>
+            @if(is_numeric($owned) && $owned > 1)
+                <span style="font-size: 0.65rem; background: rgba(0,0,0,0.15); border-radius: 4px; padding: 0 4px; margin-top: 1px;">{{ $owned }}x</span>
+            @endif
         </div>
     @endif
 

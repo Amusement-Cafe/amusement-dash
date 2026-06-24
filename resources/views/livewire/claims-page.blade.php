@@ -1,233 +1,201 @@
 <?php
 
 use Livewire\Volt\Component;
+use Livewire\Attributes\Layout;
+use Livewire\WithPagination;
 use Livewire\Attributes\Url;
 use App\Models\Claim;
+use App\Models\User;
 use App\Models\Card;
-use App\Models\BotCollection;
-use Livewire\Attributes\Layout;
-use MongoDB\BSON\ObjectId;
 
 new #[Layout('layouts.app')] class extends Component
 {
+    use WithPagination;
+
     #[Url]
-    public string $id = '';
+    public ?string $id = null;
 
-    public $selectedCardId = null;
-    public $showModal = false;
-
-    public function openCardModal($id)
+    public function selectClaim($id)
     {
-        $this->selectedCardId = $id;
-        $this->showModal = true;
-    }
-
-    public function closeModal()
-    {
-        $this->showModal = false;
-        $this->selectedCardId = null;
+        $this->id = $id;
     }
 
     public function with(): array
     {
-        if (empty($this->id)) {
-            return ['claim' => null, 'claimUser' => null, 'cards' => [], 'collections' => [], 'userOwned' => [], 'userFavs' => [], 'selectedCard' => null, 'selectedCardCollection' => null];
+        $user = auth()->user();
+
+        $claims = Claim::where('userID', $user->userID)
+            ->orderBy('timeClaimed', 'desc')
+            ->paginate(30);
+
+        if (empty($this->id) && $claims->count() > 0) {
+            $this->id = (string) $claims->first()->_id;
         }
 
-        $query = Claim::where('claimID', $this->id);
-        
-        try {
-            if (strlen($this->id) === 24) {
-                $query->orWhere('_id', new ObjectId($this->id));
-            }
-        } catch (\Exception $e) {}
+        $selectedClaim = null;
+        $claimCards = [];
 
-        $claim = $query->first();
-
-        $cards = collect();
-        $collections = [];
-        $claimUser = null;
-        $userOwned = [];
-        $userFavs = [];
-
-        if ($claim) {
-            $claimUser = \App\Models\User::where('userID', $claim->userID)->first();
+        if ($this->id) {
+            $selectedClaim = Claim::where('_id', $this->id)->orWhere('claimID', $this->id)->first();
             
-            if (!empty($claim->cardIDs)) {
-                $cards = Card::whereIn('cardID', $claim->cardIDs)->get();
-                $collectionIDs = $cards->pluck('collectionID')->unique()->toArray();
-                $collections = BotCollection::whereIn('collectionID', $collectionIDs)->get()->keyBy('collectionID')->toArray();
-
-                if (auth()->check()) {
-                    $userCards = \App\Models\UserCard::where('userID', auth()->user()->userID)
-                        ->whereIn('cardID', $cards->pluck('cardID'))
-                        ->get();
-                    
-                    foreach ($userCards as $uc) {
-                        $userOwned[$uc->cardID] = true;
-                        if ($uc->fav) {
-                            $userFavs[$uc->cardID] = true;
-                        }
-                    }
+            if ($selectedClaim) {
+                if (!empty($selectedClaim->cardIDs)) {
+                    $cardIDsToFetch = array_slice($selectedClaim->cardIDs, 0, 20);
+                    $claimCards = Card::whereIn('cardID', $cardIDsToFetch)->get();
                 }
             }
         }
 
-        $selectedCard = null;
-        $selectedCardCollection = null;
-        if ($this->selectedCardId) {
-            $selectedCard = $cards->firstWhere('cardID', (int) $this->selectedCardId);
-            if ($selectedCard) {
-                $selectedCardCollection = $collections[$selectedCard->collectionID] ?? null;
-            }
-        }
-
         return [
-            'claim' => $claim,
-            'claimUser' => $claimUser,
-            'cards' => $cards,
-            'collections' => $collections,
-            'userOwned' => $userOwned,
-            'userFavs' => $userFavs,
-            'selectedCard' => $selectedCard,
-            'selectedCardCollection' => $selectedCardCollection
+            'claims' => $claims,
+            'selectedClaim' => $selectedClaim,
+            'claimCards' => $claimCards,
+            'currentUser' => $user,
         ];
     }
 };
 ?>
 
 <div>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 
-    @if(empty($id))
-        <div class="glass-panel" style="padding: 3rem; text-align: center;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
-            <h2 style="margin-bottom: 0.5rem;">No Claim Specified</h2>
-            <p style="color: var(--text-secondary);">Please provide a valid claim ID in the URL parameter (e.g. ?id=xyz).</p>
-        </div>
-    @elseif(!$claim)
-        <div class="glass-panel" style="padding: 3rem; text-align: center; border-color: rgba(239, 68, 68, 0.3);">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">❌</div>
-            <h2 style="margin-bottom: 0.5rem; color: #f87171;">Claim Not Found</h2>
-            <p style="color: var(--text-secondary);">We couldn't find a claim matching ID: <strong>{{ $id }}</strong></p>
-        </div>
-    @else
-        <!-- Claim Summary -->
-        <div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem; display: flex; flex-wrap: wrap; gap: 2rem;">
-            <div style="flex: 1; min-width: 250px;">
-                <h3 style="color: var(--text-secondary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Claim ID</h3>
-                <p style="font-size: 1.5rem; font-weight: 600; color: var(--accent-glow);">{{ $claim->claimID }}</p>
-            </div>
-            <div style="flex: 1; min-width: 250px;">
-                <h3 style="color: var(--text-secondary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">User</h3>
-                <p style="font-size: 1.2rem;">
-                    {{ $claimUser ? $claimUser->username : $claim->userID }}
-                </p>
-            </div>
-            <div style="flex: 1; min-width: 250px;">
-                <h3 style="color: var(--text-secondary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Cost</h3>
-                <p style="font-size: 1.2rem;">{{ $claim->cost ?? 'Free' }}</p>
-            </div>
-            <div style="flex: 1; min-width: 250px;">
-                <h3 style="color: var(--text-secondary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Date Claimed</h3>
-                <p style="font-size: 1.2rem;">
-                    {{ $claim->timeClaimed ? \Carbon\Carbon::parse($claim->timeClaimed)->format('M d, Y - H:i:s') : 'Unknown' }}
-                </p>
-            </div>
-            @if($claim->promo)
-            <div style="flex: 1; min-width: 250px;">
-                <h3 style="color: var(--text-secondary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Promo Claim</h3>
-                <p style="font-size: 1.2rem; color: #f472b6;">Yes 🎁</p>
-            </div>
-            @endif
-        </div>
+    <div style="display: flex; gap: 2rem; align-items: stretch; flex-wrap: wrap;">
+        <!-- Left column: Claims List -->
+        <div style="flex: 1; min-width: 350px;">
+            <h1 style="font-size: 2rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="ph-fill ph-hand-coins" style="color: var(--accent-solid);"></i> My Claims
+            </h1>
 
-        <!-- Claimed Cards -->
-        <h2 style="font-size: 1.8rem; margin-bottom: 1.5rem;">Cards Claimed ({{ count($cards) }})</h2>
-        
-        @if(count($cards) > 0)
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem;">
-                @foreach($cards as $card)
-                    @php 
-                        $col = $collections[$card->collectionID] ?? null; 
-                        $owned = $userOwned[$card->cardID] ?? false;
-                        $fav = $userFavs[$card->cardID] ?? false;
-                    @endphp
-                    <div wire:click="openCardModal({{ $card->cardID }})">
-                        <x-card-viewer :card="$card" :collectionName="$col['name'] ?? null" :owned="$owned" :fav="$fav" />
+            <div class="glass-panel" style="padding: 1rem;">
+                @if($claims->count() > 0)
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        @foreach($claims as $tx)
+                            @php
+                                $isSelected = $id == $tx->_id || $id == $tx->claimID;
+                            @endphp
+                            <div wire:click="selectClaim('{{ $tx->_id }}')" style="background: {{ $isSelected ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)' }}; border: 1px solid {{ $isSelected ? 'var(--accent-solid)' : 'transparent' }}; padding: 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='{{ $isSelected ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)' }}'">
+                                <div style="display: flex; align-items: center; gap: 0.8rem;">
+                                    <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                                        <i class="ph-bold ph-hand-coins"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: bold; font-size: 0.9rem;">
+                                            {{ $tx->promo ? 'Promo Claim' : 'Regular Claim' }}
+                                        </div>
+                                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem; display: flex; gap: 0.5rem;">
+                                            <span>{{ $tx->timeClaimed ? \Carbon\Carbon::parse($tx->timeClaimed)->diffForHumans() : 'Unknown date' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="text-align: right; font-weight: bold;">
+                                    @if($tx->cost > 0)
+                                        <div style="font-size: 0.9rem; display: flex; align-items: center; justify-content: flex-end; gap: 0.2rem;">
+                                            {{ number_format($tx->cost) }} 🍅
+                                        </div>
+                                    @endif
+                                    @if(!empty($tx->cardIDs))
+                                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                                            <i class="ph-fill ph-cards"></i> {{ count($tx->cardIDs) }} Cards
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
-                @endforeach
-            </div>
-        @else
-            <div class="glass-panel" style="padding: 2rem; text-align: center;">
-                <p style="color: var(--text-secondary);">This claim does not contain any cards.</p>
-            </div>
-        @endif
-    @endif
-
-    <!-- Card Modal -->
-    @if($showModal && $selectedCard)
-    @teleport('body')
-    <div class="modal-overlay" wire:click.self="closeModal">
-        <div class="modal-content glass-panel" style="display: flex; flex-direction: row; flex-wrap: wrap; padding: 2rem; gap: 2rem; position: relative;">
-            <button wire:click="closeModal" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
-            
-            <!-- Left Side: Image -->
-            <div style="flex: 1; min-width: 300px; display: flex; align-items: center; justify-content: center; background: transparent; border-radius: 8px; padding: 1rem;">
-                @if($selectedCard->cardURL)
-                    <img src="{{ $selectedCard->cardURL }}" alt="{{ $selectedCard->displayName ?? $selectedCard->cardName }}" style="max-width: 100%; max-height: 500px; object-fit: contain;">
+                    
+                    <div style="margin-top: 1.5rem;">
+                        {{ $claims->links('components.custom-pagination') }}
+                    </div>
                 @else
-                    <span style="color: var(--text-secondary);">No Image Available</span>
+                    <div style="padding: 3rem; text-align: center;">
+                        <i class="ph-light ph-hand-coins" style="font-size: 3rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
+                        <p style="margin: 0; font-size: 1.1rem;">You have no claims yet.</p>
+                    </div>
                 @endif
             </div>
-            
-            <!-- Right Side: Info -->
-            <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: center;">
-                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
-                    <h2 style="font-size: 2rem; margin: 0;">{{ $selectedCard->displayName ?? $selectedCard->cardName }}</h2>
-                    @if(isset($userOwned[$selectedCard->cardID]))
-                        <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">Owned</span>
+        </div>
+
+        <!-- Right column: Claim Details -->
+        <div style="flex: 2; min-width: 400px;">
+            <div style="position: sticky; top: 6rem;">
+                <div class="glass-panel" style="padding: 2rem; min-height: 400px;">
+                    @if($selectedClaim)
+                        <div style="animation: fadeIn 0.3s ease-out;">
+                            <!-- Header -->
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+                                <div>
+                                    <h2 style="margin: 0 0 0.5rem 0; font-size: 1.8rem; display: flex; align-items: center; gap: 0.5rem;">
+                                        <i class="ph-fill ph-hand-coins" style="color: #10b981;"></i> Claim Details
+                                    </h2>
+                                    <div style="color: var(--text-secondary); font-size: 0.9rem;">
+                                        {{ $selectedClaim->timeClaimed ? \Carbon\Carbon::parse($selectedClaim->timeClaimed)->format('M d, Y g:i A') : 'Unknown Date' }}
+                                    </div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                                        <i class="ph-bold ph-check-circle"></i> Completed
+                                    </div>
+                                    @if($selectedClaim->cost > 0)
+                                        <div style="margin-top: 0.5rem; font-size: 1.2rem; font-weight: bold; color: white;">
+                                            Cost: {{ number_format($selectedClaim->cost) }} 🍅
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+    
+                            <!-- Cards Grid -->
+                            <div style="margin-bottom: 2rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1rem;">
+                                    <h3 style="font-size: 1.2rem; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                                        <i class="ph-fill ph-cards" style="color: #ec4899;"></i> Cards Claimed
+                                    </h3>
+                                    <div style="font-size: 0.9rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
+                                        <span>{{ count($selectedClaim->cardIDs) }} Total (Showing {{ min(count($selectedClaim->cardIDs), 20) }})</span>
+                                        @if(count($selectedClaim->cardIDs) > 0)
+                                            <span style="color: rgba(255,255,255,0.2);">|</span>
+                                            @php $claimIdForLink = $selectedClaim->claimID ?? $selectedClaim->_id; @endphp
+                                            <a href="/cards?claimID={{ $claimIdForLink }}" style="color: #ec4899; text-decoration: none; font-weight: bold; transition: color 0.2s;" onmouseover="this.style.color='#f472b6'" onmouseout="this.style.color='#ec4899'">View All <i class="ph-bold ph-arrow-square-out"></i></a>
+                                        @endif
+                                    </div>
+                                </div>
+                                
+                                @if(count($claimCards) > 0)
+                                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                        @foreach($claimCards as $card)
+                                            <a href="/cards?search={{ $card->cardID }}" target="_blank" style="text-decoration: none; color: inherit; display: block;">
+                                                <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 0.8rem 1rem; border: 1px solid var(--glass-border); transition: transform 0.2s, background 0.2s; display: flex; justify-content: space-between; align-items: center;" onmouseover="this.style.transform='translateY(-2px)'; this.style.background='rgba(255,255,255,0.05)';" onmouseout="this.style.transform='translateY(0)'; this.style.background='rgba(0,0,0,0.3)';">
+                                                    <div style="font-size: 0.95rem; font-weight: bold;">
+                                                        {{ $card->displayName ?? $card->cardName }}
+                                                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem; font-family: monospace;">ID: {{ $card->cardID }}</div>
+                                                    </div>
+                                                    <div style="color: var(--text-secondary); font-size: 0.85rem; white-space: nowrap; margin-left: 1rem;">
+                                                        {{ str_repeat('⭐', $card->rarity ?? 1) }}
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <div style="padding: 2rem; text-align: center; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px dashed var(--glass-border);">
+                                        <i class="ph-light ph-empty" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 0.5rem;"></i>
+                                        <div style="color: var(--text-secondary);">No cards were found for this claim.</div>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @else
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary); padding: 4rem;">
+                            <i class="ph-light ph-hand-coins" style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                            <p style="font-size: 1.1rem;">Select a claim from the left to view its details.</p>
+                        </div>
                     @endif
-                    @if(isset($userFavs[$selectedCard->cardID]))
-                        <span style="background: rgba(236, 72, 153, 0.2); color: #f472b6; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">Favorited ❤️</span>
-                    @endif
-                </div>
-                
-                <p style="color: var(--text-secondary); font-size: 1.2rem; margin-bottom: 1.5rem;">
-                    {{ str_repeat('⭐', $selectedCard->rarity ?? 1) }} | ID: #{{ $selectedCard->cardID }}
-                </p>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
-                    <div class="glass-panel" style="padding: 1rem; border: 1px dashed var(--glass-border);">
-                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Collection</p>
-                        <p style="font-size: 1.1rem; font-weight: 600;">
-                            <a href="{{ route('cards.index') }}?collectionID={{ $selectedCard->collectionID }}" style="color: var(--accent-solid); text-decoration: none;">
-                                {{ $selectedCardCollection['name'] ?? $selectedCard->collectionID }}
-                            </a>
-                        </p>
-                    </div>
-                    <div class="glass-panel" style="padding: 1rem; border: 1px dashed var(--glass-border);">
-                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Eval</p>
-                        <p style="font-size: 1.1rem; font-weight: 600;">{{ $selectedCard->eval ?? 'N/A' }} 🍅</p>
-                    </div>
-                    <div class="glass-panel" style="padding: 1rem; border: 1px dashed var(--glass-border);">
-                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Total Copies</p>
-                        <p style="font-size: 1.1rem; font-weight: 600;">{{ $selectedCard->stats['totalCopies'] ?? 'N/A' }}</p>
-                    </div>
-                    <div class="glass-panel" style="padding: 1rem; border: 1px dashed var(--glass-border);">
-                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Rating</p>
-                        <p style="font-size: 1.1rem; font-weight: 600;">
-                            @if(($selectedCard->timesRated ?? 0) > 0)
-                                {{ number_format(($selectedCard->ratingSum ?? 0) / $selectedCard->timesRated, 1) }} / 5 
-                                <span style="font-size: 0.8rem; color: var(--text-secondary);">({{ $selectedCard->timesRated }} votes)</span>
-                            @else
-                                No Ratings
-                            @endif
-                        </p>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
-    @endteleport
-    @endif
 </div>

@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Cache;
 
 new #[Layout('layouts.app')] class extends Component
 {
+    public int $txLimit = 5;
+
     public function with(): array
     {
         $collections = Cache::remember('bot_collections_array', 3600, function() {
@@ -92,9 +94,36 @@ new #[Layout('layouts.app')] class extends Component
             $transactions = \App\Models\Transaction::where('toID', $user->userID)
                 ->orWhere('fromID', $user->userID)
                 ->orderBy('dateCreated', 'desc')
-                ->limit(5)
+                ->limit($this->txLimit + 1)
                 ->get();
+            
+            $hasMoreTransactions = $transactions->count() > $this->txLimit;
+            $transactions = $transactions->take($this->txLimit);
+            
+            $otherUserIDs = $transactions->map(function($tx) use ($user) {
+                return $tx->toID === $user->userID ? $tx->fromID : $tx->toID;
+            })->filter()->unique()->toArray();
+            
+            $otherUsers = [];
+            if (!empty($otherUserIDs)) {
+                $otherUsers = \App\Models\User::whereIn('userID', $otherUserIDs)->get()->keyBy('userID');
+            }
+            
             $dashboardData['transactions'] = $transactions;
+            $dashboardData['hasMoreTransactions'] = $hasMoreTransactions;
+            $dashboardData['transactionUsers'] = $otherUsers;
+
+            $claimsQuery = \App\Models\Claim::where('userID', $user->userID);
+            if ($lastDaily) {
+                $claimsQuery->where('timeClaimed', '>', $lastDaily);
+            } else {
+                $claimsQuery->where('timeClaimed', '>', now()->subHours(24));
+            }
+            $claims = $claimsQuery->orderBy('timeClaimed', 'desc')->limit($this->txLimit + 1)->get();
+            $hasMoreClaims = $claims->count() > $this->txLimit;
+            
+            $dashboardData['claims'] = $claims->take($this->txLimit);
+            $dashboardData['hasMoreClaims'] = $hasMoreClaims;
 
             $quests = \App\Models\UserQuest::where('userID', $user->userID)
                 ->where('completed', false)
@@ -381,7 +410,15 @@ new #[Layout('layouts.app')] class extends Component
                                         </div>
                                         <div>
                                             <div style="font-weight: bold; font-size: 0.9rem;">
-                                                {{ $isIncoming ? 'From ' . $tx->fromID : 'To ' . $tx->toID }}
+                                                @php
+                                                    $otherID = $isIncoming ? $tx->fromID : $tx->toID;
+                                                    $otherUser = $data['transactionUsers'][$otherID] ?? null;
+                                                @endphp
+                                                @if($otherUser && $otherUser->username)
+                                                    {{ $isIncoming ? 'From ' : 'To ' }}<a href="/profile?id={{ $otherID }}" style="color: inherit; text-decoration: underline;">{{ $otherUser->username }}</a>
+                                                @else
+                                                    {{ $isIncoming ? 'From ' : 'To ' }}<span style="color: var(--text-secondary);">{{ $otherID }}</span>
+                                                @endif
                                             </div>
                                             <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">
                                                 <span style="color: {{ $statusColor }}; text-transform: capitalize;">{{ $tx->status ?? 'Completed' }}</span>
@@ -398,14 +435,66 @@ new #[Layout('layouts.app')] class extends Component
                                 </div>
                             @endforeach
                         </div>
+                        @if($data['hasMoreTransactions'] ?? false)
+                            <div style="text-align: center; margin-top: 1rem;">
+                                <a href="/transactions" style="color: var(--accent-solid); text-decoration: none; font-size: 0.9rem; font-weight: bold; transition: color 0.2s;" onmouseover="this.style.color='var(--accent-glow)'" onmouseout="this.style.color='var(--accent-solid)'">Show All <i class="ph-bold ph-arrow-right"></i></a>
+                            </div>
+                        @endif
                     @else
-                        <div style="text-align: center; padding: 1.5rem 0; opacity: 0.6;">
-                            <i class="ph-light ph-receipt" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                        <div class="glass-panel" style="padding: 2rem; text-align: center; border: 1px dashed rgba(255,255,255,0.1);">
                             <p style="margin: 0; font-size: 0.9rem;">No recent transactions.</p>
                         </div>
                     @endif
                 </div>
-            </div>
+
+                <!-- Today's Claims -->
+                <div class="glass-panel" style="padding: 2rem;">
+                    <h3 style="margin: 0 0 1.5rem 0; display: flex; align-items: center; justify-content: space-between; font-size: 1.1rem;">
+                        <span style="display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-hand-coins" style="color: #10b981; font-size: 1.3rem;"></i> Today's Claims</span>
+                    </h3>
+                    
+                    @if(count($data['claims']) > 0)
+                        <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                            @foreach($data['claims'] as $tx)
+                                <div style="background: rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                                        <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(16,185,129,0.2); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                                            <i class="ph-bold ph-hand-coins"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: bold; font-size: 0.9rem;">
+                                                {{ $tx->promo ? 'Promo Claim' : 'Regular Claim' }}
+                                            </div>
+                                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                                                <span>{{ $tx->timeClaimed ? \Carbon\Carbon::parse($tx->timeClaimed)->diffForHumans() : 'Unknown date' }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="text-align: right; font-weight: bold;">
+                                        @if($tx->cost > 0)
+                                            <div style="font-size: 0.9rem; display: flex; align-items: center; justify-content: flex-end; gap: 0.2rem;">
+                                                {{ number_format($tx->cost) }} 🍅
+                                            </div>
+                                        @endif
+                                        @if(!empty($tx->cardIDs))
+                                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                                                <i class="ph-fill ph-cards"></i> {{ count($tx->cardIDs) }} Cards
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div style="text-align: center; padding: 1.5rem 0; opacity: 0.6;">
+                            <p style="margin: 0; font-size: 0.9rem;">No claims today.</p>
+                        </div>
+                    @endif
+
+                    <div style="text-align: center; margin-top: 1rem;">
+                        <a href="/claims" style="color: var(--accent-solid); text-decoration: none; font-size: 0.9rem; font-weight: bold; transition: color 0.2s;" onmouseover="this.style.color='var(--accent-glow)'" onmouseout="this.style.color='var(--accent-solid)'">Show All <i class="ph-bold ph-arrow-right"></i></a>
+                    </div>
+                </div>            </div>
 
             <!-- Right Column -->
             <div style="flex: 1 1 350px; display: flex; flex-direction: column;">

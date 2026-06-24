@@ -59,13 +59,17 @@
                                 <i class="ph-fill ph-cards" style="color: #60a5fa; font-size: 1.2rem;"></i> My Cards
                             </a>
                             
-                            <a href="#" style="display: flex; align-items: center; justify-content: space-between; padding: 0.8rem 1rem; color: white; text-decoration: none; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                            <a href="{{ route('transactions.index') }}" style="display: flex; align-items: center; justify-content: space-between; padding: 0.8rem 1rem; color: white; text-decoration: none; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 <div style="display: flex; align-items: center; gap: 0.8rem;">
                                     <i class="ph-fill ph-arrows-left-right" style="color: #34d399; font-size: 1.2rem;"></i> Transactions
                                 </div>
                                 @if($incomingTx > 0)
                                     <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.7rem; padding: 2px 6px; border-radius: 12px; font-weight: bold;">{{ $incomingTx }}</span>
                                 @endif
+                            </a>
+                            
+                            <a href="{{ route('claims.index') }}" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1rem; color: white; text-decoration: none; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                <i class="ph-fill ph-hand-coins" style="color: #10b981; font-size: 1.2rem;"></i> Claims
                             </a>
                             
                             <a href="{{ route('preferences.index') }}" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1rem; color: white; text-decoration: none; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
