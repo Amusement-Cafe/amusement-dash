@@ -16,7 +16,7 @@ Amusement Club is a Discord card trading bot using MongoDB as the primary datast
 
 ## Prerequisites
 Before you begin, ensure you have the following installed on your machine:
-- **PHP** 8.2 or higher
+- **PHP** 8.2 or higher (Must include `xml` and `mongodb` extensions. E.g., `sudo apt-get install php8.4-xml php8.4-mongodb`)
 - **Composer** (Dependency Manager for PHP)
 - **Node.js** & **npm** (for building frontend assets)
 - **MongoDB** (You need access to the existing Amusement Club `amuse3` database)
@@ -35,6 +35,7 @@ Use Composer to install the backend dependencies, including Laravel, Livewire, a
 ```bash
 composer install
 ```
+*Note: If you get a version mismatch error regarding `ext-mongodb`, you can resolve it by running `composer update mongodb/mongodb` to match your installed extension version, or bypass it with `composer install --ignore-platform-req=ext-mongodb`.*
 
 ### 3. Install NPM Dependencies
 Install and build the frontend assets (CSS/JS) using Vite.
@@ -52,6 +53,8 @@ Next, generate your application encryption key:
 ```bash
 php artisan key:generate
 ```
+
+*Troubleshooting: If you see a `Cannot modify header information - headers already sent` error in your browser when loading the site, this usually means a deep exception occurred (often a missing `.env` configuration, no app key, or bad database connection). Check `storage/logs/laravel.log` for the true error.*
 
 ### 5. Configure MongoDB
 Open your `.env` file and configure your database connection to point to the Amusement Club MongoDB instance.
@@ -95,6 +98,23 @@ npm run dev
 ```
 
 You can now visit [http://localhost:8000](http://localhost:8000) in your browser to view and interact with the dashboard!
+
+### Sharing Locally via Cloudflare Tunnel (For Beta Testers)
+If you want to expose your local environment securely to external beta testers without deploying, you can use a free Cloudflare tunnel.
+
+1. **Install cloudflared:**
+On Debian/Ubuntu, download and install the package:
+```bash
+curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+sudo dpkg -i cloudflared.deb
+```
+2. **Start the tunnel:**
+Make sure your Laravel server is running (`php artisan serve`). In a new terminal, run:
+```bash
+cloudflared tunnel --url http://127.0.0.1:8000
+```
+3. Cloudflare will output a public URL (e.g., `https://random-words.trycloudflare.com`). Share this link with your beta testers!
+*Note: If assets fail to load over the tunnel, restart your server with `php artisan serve --host=0.0.0.0` or temporarily update your `.env` `APP_URL` to the Cloudflare link.*
 
 ---
 
