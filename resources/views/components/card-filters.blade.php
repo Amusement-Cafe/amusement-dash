@@ -1,4 +1,17 @@
-@props(['collections' => [], 'tags' => [], 'sortDesc' => true, 'hidePromos' => false, 'activeFiltersCount' => 0])
+@props([
+    'collections' => [], 
+    'tags' => [], 
+    'sortDesc' => true, 
+    'hidePromos' => false, 
+    'activeFiltersCount' => 0,
+    'sortOptions' => [
+        'random' => 'Random Order',
+        'cardID' => 'ID',
+        'rarity' => 'Rarity',
+        'added' => 'Date Added',
+        'eval' => 'Eval'
+    ]
+])
 
 <div x-data="{ open: false }" class="glass-panel" style="margin-bottom: 2rem; width: 100%;">
     <!-- Header / Toggle -->
@@ -61,11 +74,9 @@
                 <div style="min-width: 150px;">
                     <label style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.3rem; display: block;"><i class="ph-fill ph-sort-ascending"></i> Sort By</label>
                     <select wire:model.live="sortBy" class="input-glass" style="width: 100%;">
-                        <option value="random">Random Order</option>
-                        <option value="cardID">ID</option>
-                        <option value="rarity">Rarity</option>
-                        <option value="added">Date Added</option>
-                        <option value="eval">Eval</option>
+                        @foreach($sortOptions as $val => $label)
+                            <option value="{{ $val }}">{{ $label }}</option>
+                        @endforeach
                     </select>
                 </div>
 

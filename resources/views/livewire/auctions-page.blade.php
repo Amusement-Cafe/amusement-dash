@@ -9,6 +9,7 @@ use App\Models\BotCollection;
 use App\Models\UserCard;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 
 use Livewire\Attributes\Title;
 
@@ -16,9 +17,78 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
 {
     use WithPagination;
 
+    #[Url]
+    public $search = '';
+    
+    #[Url]
+    public $rarity = '';
+    
+    #[Url]
+    public $collectionID = '';
+    
+    #[Url]
+    public array $tags = [];
+    
+    public $tagInput = '';
+
+    #[Url]
+    public string $filterOwned = '';
+    
+    #[Url]
+    public string $filterFav = '';
+    
+    #[Url]
+    public string $filterWish = '';
+
+    #[Url]
+    public string $sortBy = 'expires';
+    
+    #[Url]
+    public $sortDesc = false;
+    
+    #[Url]
+    public $hidePromos = false;
+
     public $selectedAuctionId = null;
     public $showModal = false;
     public $bidAmount = 0;
+
+    public function addTag()
+    {
+        $input = strtolower(trim($this->tagInput));
+        if ($input && !in_array($input, $this->tags)) {
+            $this->tags[] = $input;
+            $this->resetPage();
+        }
+        $this->tagInput = '';
+    }
+
+    public function removeTag($tag)
+    {
+        $this->tags = array_values(array_diff($this->tags, [$tag]));
+        $this->resetPage();
+    }
+    
+    public function clearFilters()
+    {
+        $this->search = '';
+        $this->rarity = '';
+        $this->collectionID = '';
+        $this->tags = [];
+        $this->tagInput = '';
+        $this->filterOwned = '';
+        $this->filterFav = '';
+        $this->filterWish = '';
+        $this->hidePromos = false;
+        $this->resetPage();
+    }
+
+    public function updated($property)
+    {
+        if (in_array($property, ['search', 'rarity', 'collectionID', 'sortBy', 'sortDesc', 'hidePromos', 'filterOwned', 'filterFav', 'filterWish'])) {
+            $this->resetPage();
+        }
+    }
 
     public function openAuctionModal($id)
     {
@@ -93,20 +163,130 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
 
     public function with(): array
     {
-        $auctions = Auction::where('ended', false)
-            ->where('cancelled', false)
-            ->orderBy('expires', 'asc')
-            ->paginate(16);
+        $auctionQuery = Auction::where('ended', false)->where('cancelled', false);
+
+        $collections = Cache::remember('bot_collections_array', 3600, function() {
+            return BotCollection::all()->keyBy('collectionID')->toArray();
+        });
+
+        $activeFiltersCount = 0;
+        if ($this->search !== '') $activeFiltersCount++;
+        if ($this->rarity !== '') $activeFiltersCount++;
+        if ($this->collectionID !== '') $activeFiltersCount++;
+        if (!empty($this->tags)) $activeFiltersCount++;
+        if ($this->hidePromos) $activeFiltersCount++;
+        if ($this->filterOwned !== '') $activeFiltersCount++;
+        if ($this->filterFav !== '') $activeFiltersCount++;
+        if ($this->filterWish !== '') $activeFiltersCount++;
+
+        if ($activeFiltersCount > 0) {
+            $allAuctionCardIDs = Auction::where('ended', false)->where('cancelled', false)->distinct('cardID')->pluck('cardID')->toArray();
+            
+            $cardQuery = Card::whereIn('cardID', $allAuctionCardIDs);
+
+            if ($this->search) {
+                $cardQuery->where(function($q) {
+                    $q->where('cardName', 'like', '%' . $this->search . '%')
+                      ->orWhere('displayName', 'like', '%' . $this->search . '%');
+                      
+                    if (is_numeric($this->search)) {
+                        $q->orWhere('cardID', (int)$this->search);
+                    }
+                });
+            }
+
+            if ($this->rarity !== '') {
+                $cardQuery->where('rarity', (int) $this->rarity);
+            }
+
+            if ($this->collectionID !== '') {
+                $cardQuery->where('collectionID', $this->collectionID);
+            }
+
+            if ($this->hidePromos) {
+                $promoCollectionIDs = collect($collections)->filter(function($col) { return !empty($col['promo']); })->keys()->toArray();
+                $cardQuery->whereNotIn('collectionID', $promoCollectionIDs);
+            }
+
+            if (!empty($this->tags)) {
+                $matchedCardIDs = null;
+                foreach ($this->tags as $t) {
+                    $ids = \App\Models\Tag::where('tagName', 'like', '%' . $t . '%')
+                        ->where('status', 'clear')
+                        ->pluck('cardID')
+                        ->toArray();
+                        
+                    if ($matchedCardIDs === null) {
+                        $matchedCardIDs = $ids;
+                    } else {
+                        $matchedCardIDs = array_intersect($matchedCardIDs, $ids);
+                    }
+                }
+                if (empty($matchedCardIDs)) {
+                    $cardQuery->where('cardID', -1);
+                } else {
+                    $cardQuery->whereIn('cardID', $matchedCardIDs);
+                }
+            }
+
+            if (auth()->check()) {
+                if ($this->filterOwned !== '' || $this->filterFav !== '') {
+                    $userCardsQuery = UserCard::where('userID', auth()->user()->userID);
+                    $myUserCards = $userCardsQuery->get();
+                    
+                    if ($this->filterOwned === 'exclude') {
+                        $cardQuery->whereNotIn('cardID', $myUserCards->pluck('cardID'));
+                    } elseif ($this->filterOwned === 'only' || is_numeric($this->filterOwned)) {
+                        $minCopies = $this->filterOwned === 'only' ? 1 : (int)$this->filterOwned;
+                        $validCardIDs = $myUserCards->filter(function($uc) use ($minCopies) {
+                            return ($uc->amount ?? 1) >= $minCopies;
+                        })->pluck('cardID');
+                        $cardQuery->whereIn('cardID', $validCardIDs);
+                    }
+
+                    if ($this->filterFav === 'only') {
+                        $cardQuery->whereIn('cardID', $myUserCards->where('fav', true)->pluck('cardID'));
+                    } elseif ($this->filterFav === 'exclude') {
+                        $cardQuery->whereNotIn('cardID', $myUserCards->where('fav', true)->pluck('cardID'));
+                    }
+                }
+
+                if ($this->filterWish !== '') {
+                    $myWishlists = \App\Models\UserWishlist::where('userID', auth()->user()->userID)->get();
+                    $wishCardIDs = $myWishlists->pluck('cardID')->map(fn($id) => (int)$id)->toArray();
+                    
+                    if ($this->filterWish === 'only') {
+                        $cardQuery->whereIn('cardID', $wishCardIDs);
+                    } elseif ($this->filterWish === 'exclude') {
+                        $cardQuery->whereNotIn('cardID', $wishCardIDs);
+                    }
+                }
+            }
+            
+            $filteredCardIDs = $cardQuery->pluck('cardID')->toArray();
+            
+            if (empty($filteredCardIDs)) {
+                $auctionQuery->where('cardID', -1);
+            } else {
+                $auctionQuery->whereIn('cardID', $filteredCardIDs);
+            }
+        }
+
+        if ($this->sortBy === 'expires') {
+            $auctionQuery->orderBy('expires', $this->sortDesc ? 'desc' : 'asc');
+        } elseif ($this->sortBy === 'price') {
+            $auctionQuery->orderBy('price', $this->sortDesc ? 'desc' : 'asc');
+        } else {
+            $auctionQuery->orderBy('expires', 'asc');
+        }
+        
+        $auctions = $auctionQuery->paginate(16);
 
         $cardIDs = $auctions->pluck('cardID')->unique()->toArray();
         $userIDs = $auctions->pluck('userID')->unique()->toArray();
 
         $cards = Card::whereIn('cardID', $cardIDs)->get()->keyBy('cardID');
         $sellers = User::whereIn('userID', $userIDs)->get()->keyBy('userID');
-
-        $collections = Cache::remember('bot_collections_array', 3600, function() {
-            return BotCollection::all()->keyBy('collectionID')->toArray();
-        });
 
         $userOwned = [];
         $userFavs = [];
@@ -139,6 +319,11 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
             }
         }
 
+        $sortOptions = [
+            'expires' => 'Ending Soon',
+            'price' => 'Price'
+        ];
+
         return [
             'auctions' => $auctions,
             'cards' => $cards,
@@ -149,7 +334,9 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
             'selectedAuction' => $selectedAuction,
             'selectedCard' => $selectedCard,
             'selectedCardCollection' => $selectedCardCollection,
-            'sellerUser' => $sellerUser
+            'sellerUser' => $sellerUser,
+            'activeFiltersCount' => $activeFiltersCount,
+            'sortOptions' => $sortOptions
         ];
     }
 };
@@ -159,6 +346,9 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
     <div style="margin-bottom: 2rem;">
         <h1 style="font-size: 2.5rem; margin: 0;">Live Auctions ({{ number_format($auctions->total()) }} running)</h1>
     </div>
+
+    <!-- Filters Component -->
+    <x-card-filters :collections="$collections" :tags="$tags" :sortDesc="$sortDesc" :hidePromos="$hidePromos" :activeFiltersCount="$activeFiltersCount" :sortOptions="$sortOptions" />
 
     @if($auctions->count() > 0)
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 2rem; margin-bottom: 2rem;">
