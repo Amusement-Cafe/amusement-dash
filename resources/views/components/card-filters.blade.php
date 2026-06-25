@@ -42,7 +42,14 @@
                     <label style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.3rem; display: block;"><i class="ph-fill ph-books"></i> Collection</label>
                     <select wire:model.live="collectionID" class="input-glass" style="width: 100%;">
                         <option value="">All Collections</option>
-                        @foreach($collections as $col)
+                        @php
+                            $filteredCollections = collect($collections);
+                            if ($hidePromos) {
+                                $filteredCollections = $filteredCollections->filter(fn($c) => empty($c['promo']));
+                            }
+                            $filteredCollections = $filteredCollections->sortBy(fn($c) => strtolower($c['name'] ?? ''));
+                        @endphp
+                        @foreach($filteredCollections as $col)
                             <option value="{{ $col['collectionID'] }}">{{ $col['name'] }}</option>
                         @endforeach
                     </select>
@@ -86,8 +93,13 @@
                         <label style="color: var(--text-secondary); font-size: 0.9rem; margin: 0; display: flex; align-items: center; gap: 0.3rem;"><i class="ph-fill ph-check-circle" style="color: #34d399;"></i> Owned:</label>
                         <select wire:model.live="filterOwned" class="input-glass" style="padding: 0.3rem 1rem;">
                             <option value="">Any</option>
-                            <option value="only">Only</option>
-                            <option value="exclude">Exclude</option>
+                            <option value="only">1+ Copies</option>
+                            <option value="2">2+ Copies</option>
+                            <option value="3">3+ Copies</option>
+                            <option value="4">4+ Copies</option>
+                            <option value="5">5+ Copies</option>
+                            <option value="10">10+ Copies</option>
+                            <option value="exclude">0 Copies (Exclude)</option>
                         </select>
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">

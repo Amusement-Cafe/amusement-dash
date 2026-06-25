@@ -239,10 +239,14 @@ new #[Layout('layouts.app')] #[Title('Cards')] class extends Component
                 $userCardsQuery = UserCard::where('userID', auth()->user()->userID);
                 $myUserCards = $userCardsQuery->get();
                 
-                if ($this->filterOwned === 'only') {
-                    $query->whereIn('cardID', $myUserCards->pluck('cardID'));
-                } elseif ($this->filterOwned === 'exclude') {
+                if ($this->filterOwned === 'exclude') {
                     $query->whereNotIn('cardID', $myUserCards->pluck('cardID'));
+                } elseif ($this->filterOwned === 'only' || is_numeric($this->filterOwned)) {
+                    $minCopies = $this->filterOwned === 'only' ? 1 : (int)$this->filterOwned;
+                    $validCardIDs = $myUserCards->filter(function($uc) use ($minCopies) {
+                        return ($uc->amount ?? 1) >= $minCopies;
+                    })->pluck('cardID');
+                    $query->whereIn('cardID', $validCardIDs);
                 }
 
                 if ($this->filterFav === 'only') {
