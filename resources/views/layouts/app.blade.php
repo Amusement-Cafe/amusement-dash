@@ -26,11 +26,38 @@
     <body class="antialiased">
         
         <!-- Navigation -->
-        <nav class="navbar animate-fade-in">
+        @php
+            $user = auth()->user();
+            $avatarUrl = '';
+            $incomingTx = 0;
+            if ($user) {
+                $avatarIndex = is_numeric($user->userID) ? (substr($user->userID, -1) % 6) : 0;
+                $defaultAvatar = "https://cdn.discordapp.com/embed/avatars/{$avatarIndex}.png";
+                $avatarUrl = \Illuminate\Support\Facades\Cache::remember('discord_avatar_' . $user->userID, 86400, function() use ($user, $defaultAvatar) {
+                    $botToken = env('DISCORD_BOT_TOKEN');
+                    if (!$botToken) return $defaultAvatar;
+                    $response = \Illuminate\Support\Facades\Http::withHeaders(['Authorization' => "Bot {$botToken}"])->get("https://discord.com/api/users/{$user->userID}");
+                    if ($response->successful() && !empty($response->json('avatar'))) {
+                        $hash = $response->json('avatar');
+                        $ext = str_starts_with($hash, 'a_') ? 'gif' : 'png';
+                        return "https://cdn.discordapp.com/avatars/{$user->userID}/{$hash}.{$ext}?size=256";
+                    }
+                    return $defaultAvatar;
+                });
+                $incomingTx = \Illuminate\Support\Facades\DB::connection('mongodb')->table('transactions')->where('toID', $user->userID)->where('status', 'pending')->count();
+            }
+        @endphp
+        <nav class="navbar animate-fade-in" x-data="{ mobileOpen: false }">
             <div class="nav-brand" style="display: flex; align-items: center; gap: 0.8rem;">
                 <img src="https://amu.cards/favicon.ico" alt="Amusement Club" style="width: 28px; height: 28px; filter: drop-shadow(0 0 8px rgba(255,255,255,0.2));">
                 Amusement Club
             </div>
+            
+            <button class="hamburger" @click="mobileOpen = !mobileOpen" aria-label="Menu">
+                <i class="ph-bold ph-list" x-show="!mobileOpen"></i>
+                <i class="ph-bold ph-x" x-show="mobileOpen" style="display: none;"></i>
+            </button>
+
             <div class="nav-links">
                 <a href="/" class="nav-link"><i class="ph-bold ph-house" style="font-size: 1.1rem; color: #a855f7;"></i> Home</a>
                 <a href="{{ route('cards.index') }}" class="nav-link"><i class="ph-bold ph-cards" style="font-size: 1.1rem; color: #60a5fa;"></i> All Cards</a>
@@ -39,27 +66,10 @@
                 <a href="{{ route('leaderboards.index') }}" class="nav-link"><i class="ph-bold ph-trophy" style="font-size: 1.1rem; color: #eab308;"></i> Leaderboards</a>
                 @auth
                     <a href="{{ route('heroes.index') }}" class="nav-link"><i class="ph-bold ph-mask-happy" style="font-size: 1.1rem; color: #ec4899;"></i> Heroes</a>
-                    @php
-                        $user = auth()->user();
-                        $avatarIndex = is_numeric($user->userID) ? (substr($user->userID, -1) % 6) : 0;
-                        $defaultAvatar = "https://cdn.discordapp.com/embed/avatars/{$avatarIndex}.png";
-                        $avatarUrl = \Illuminate\Support\Facades\Cache::remember('discord_avatar_' . $user->userID, 86400, function() use ($user, $defaultAvatar) {
-                            $botToken = env('DISCORD_BOT_TOKEN');
-                            if (!$botToken) return $defaultAvatar;
-                            $response = \Illuminate\Support\Facades\Http::withHeaders(['Authorization' => "Bot {$botToken}"])->get("https://discord.com/api/users/{$user->userID}");
-                            if ($response->successful() && !empty($response->json('avatar'))) {
-                                $hash = $response->json('avatar');
-                                $ext = str_starts_with($hash, 'a_') ? 'gif' : 'png';
-                                return "https://cdn.discordapp.com/avatars/{$user->userID}/{$hash}.{$ext}?size=256";
-                            }
-                            return $defaultAvatar;
-                        });
-                        $incomingTx = \Illuminate\Support\Facades\DB::connection('mongodb')->table('transactions')->where('toID', $user->userID)->where('status', 'pending')->count();
-                    @endphp
                     <div x-data="{ open: false }" style="position: relative;">
-                        <button @click="open = !open" @click.away="open = false" style="background: transparent; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.8rem; padding: 0.3rem 0.8rem; border-radius: 20px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                        <button @click="open = !open" @click.away="open = false" style="background: transparent; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.5rem; border-radius: 20px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                             <img src="{{ $avatarUrl }}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-solid);">
-                            <span style="color: white; font-weight: bold; font-family: inherit;">{{ $user->username }}</span>
+                            <span style="color: white; font-weight: bold; font-family: inherit; max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $user->username }}</span>
                             <i class="ph-bold ph-caret-down" style="color: var(--text-secondary); transition: transform 0.2s;" :style="{ transform: open ? 'rotate(180deg)' : 'none' }"></i>
                         </button>
                         
@@ -102,6 +112,57 @@
                     </div>
                 @else
                     <a href="{{ route('login.discord') }}" class="btn btn-primary">Sign In with Discord</a>
+                @endauth
+            </div>
+
+            <!-- Mobile Menu -->
+            <div class="mobile-menu" x-show="mobileOpen" x-transition.opacity style="display: none;">
+                <a href="/" class="nav-link"><i class="ph-bold ph-house" style="font-size: 1.1rem; color: #a855f7;"></i> Home</a>
+                <a href="{{ route('cards.index') }}" class="nav-link"><i class="ph-bold ph-cards" style="font-size: 1.1rem; color: #60a5fa;"></i> All Cards</a>
+                <a href="{{ route('collections.index') }}" class="nav-link"><i class="ph-bold ph-books" style="font-size: 1.1rem; color: #34d399;"></i> Collections</a>
+                <a href="{{ route('auctions.index') }}" class="nav-link"><i class="ph-bold ph-gavel" style="font-size: 1.1rem; color: #fbbf24;"></i> Auctions</a>
+                <a href="{{ route('leaderboards.index') }}" class="nav-link"><i class="ph-bold ph-trophy" style="font-size: 1.1rem; color: #eab308;"></i> Leaderboards</a>
+                @auth
+                    <a href="{{ route('heroes.index') }}" class="nav-link"><i class="ph-bold ph-mask-happy" style="font-size: 1.1rem; color: #ec4899;"></i> Heroes</a>
+                    
+                    <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0.5rem 0;"></div>
+                    <div style="padding: 0.5rem 1rem; color: var(--text-secondary); font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">{{ $user->username }}'s Account</div>
+                    
+                    <a href="{{ route('profile.show') }}" class="nav-link">
+                        <i class="ph-fill ph-user" style="color: var(--accent-solid); font-size: 1.2rem;"></i> Profile
+                    </a>
+                    
+                    <a href="{{ route('cards.index') }}?owner={{ $user->userID }}" class="nav-link">
+                        <i class="ph-fill ph-cards" style="color: #60a5fa; font-size: 1.2rem;"></i> My Cards
+                    </a>
+                    
+                    <a href="{{ route('transactions.index') }}" class="nav-link" style="justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="ph-fill ph-arrows-left-right" style="color: #34d399; font-size: 1.2rem;"></i> Transactions
+                        </div>
+                        @if($incomingTx > 0)
+                            <span style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.7rem; padding: 2px 6px; border-radius: 12px; font-weight: bold;">{{ $incomingTx }}</span>
+                        @endif
+                    </a>
+                    
+                    <a href="{{ route('claims.index') }}" class="nav-link">
+                        <i class="ph-fill ph-hand-coins" style="color: #10b981; font-size: 1.2rem;"></i> Claims
+                    </a>
+                    
+                    <a href="{{ route('preferences.index') }}" class="nav-link">
+                        <i class="ph-fill ph-gear" style="color: #a855f7; font-size: 1.2rem;"></i> Preferences
+                    </a>
+                    
+                    <form action="{{ route('logout') }}" method="POST" style="margin: 0; width: 100%;">
+                        @csrf
+                        <button type="submit" class="nav-link" style="width: 100%; text-align: left; background: transparent; border: none; cursor: pointer; color: #ef4444; font-family: inherit; font-size: 0.95rem;">
+                            <i class="ph-bold ph-sign-out" style="font-size: 1.2rem;"></i> Logout
+                        </button>
+                    </form>
+                @else
+                    <div style="padding: 1rem;">
+                        <a href="{{ route('login.discord') }}" class="btn btn-primary" style="width: 100%;">Sign In with Discord</a>
+                    </div>
                 @endauth
             </div>
         </nav>
