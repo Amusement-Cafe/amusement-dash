@@ -5,7 +5,9 @@ use Livewire\Attributes\Layout;
 use App\Models\UserInventory;
 use App\Models\BotCollection;
 
-new #[Layout('layouts.app')] class extends Component
+use Livewire\Attributes\Title;
+
+new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
 {
     public function with(): array
     {

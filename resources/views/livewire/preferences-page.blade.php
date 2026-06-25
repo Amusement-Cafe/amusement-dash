@@ -5,7 +5,9 @@ use Livewire\Attributes\Layout;
 use App\Models\User;
 use App\Models\BotCollection;
 
-new #[Layout('layouts.app')] class extends Component
+use Livewire\Attributes\Title;
+
+new #[Layout('layouts.app')] #[Title('Preferences')] class extends Component
 {
     public array $prefs = [];
     public array $achievements = [];

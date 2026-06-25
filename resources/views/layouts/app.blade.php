@@ -3,18 +3,18 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{{ $title ?? 'Amusement Club | Global Card Collecting Game' }}</title>
+        <title>{{ isset($title) && $title !== '' ? $title . ' | Amusement Club' : 'Amusement Club | Global Card Collecting Game' }}</title>
         <meta name="description" content="{{ $description ?? 'Amusement Club is a global card collecting and trading game with your favorite characters.' }}">
         
         <!-- Open Graph / Social Media -->
-        <meta property="og:title" content="{{ $title ?? 'Amusement Club | Global Card Collecting Game' }}">
+        <meta property="og:title" content="{{ isset($title) && $title !== '' ? $title . ' | Amusement Club' : 'Amusement Club | Global Card Collecting Game' }}">
         <meta property="og:description" content="{{ $description ?? 'Amusement Club is a global card collecting and trading game with your favorite characters.' }}">
         <meta property="og:image" content="{{ $ogImage ?? 'https://a.amu.cards/web/CardShowcase.png' }}">
         <meta property="og:type" content="website">
         
         <!-- Twitter -->
         <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="{{ $title ?? 'Amusement Club | Global Card Collecting Game' }}">
+        <meta name="twitter:title" content="{{ isset($title) && $title !== '' ? $title . ' | Amusement Club' : 'Amusement Club | Global Card Collecting Game' }}">
         <meta name="twitter:description" content="{{ $description ?? 'Amusement Club is a global card collecting and trading game with your favorite characters.' }}">
         <meta name="twitter:image" content="{{ $ogImage ?? 'https://a.amu.cards/web/CardShowcase.png' }}">
 

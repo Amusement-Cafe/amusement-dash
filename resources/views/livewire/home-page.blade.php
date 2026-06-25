@@ -179,6 +179,7 @@ new #[Layout('layouts.app')] class extends Component
 
 <div>
     @auth
+        <x-slot:title>Dashboard</x-slot:title>
         @php $data = $dashboardData; @endphp
         
         <div style="margin-bottom: 2rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 1.5rem;">

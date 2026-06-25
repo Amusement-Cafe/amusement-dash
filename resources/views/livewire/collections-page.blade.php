@@ -7,7 +7,9 @@ use App\Models\Card;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 
-new #[Layout('layouts.app')] class extends Component
+use Livewire\Attributes\Title;
+
+new #[Layout('layouts.app')] #[Title('Collections')] class extends Component
 {
     use WithPagination;
 

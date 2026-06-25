@@ -10,7 +10,9 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Attributes\On;
 
-new #[Layout('layouts.app')] class extends Component
+use Livewire\Attributes\Title;
+
+new #[Layout('layouts.app')] #[Title('Cards')] class extends Component
 {
     use WithPagination;
 

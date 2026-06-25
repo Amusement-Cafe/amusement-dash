@@ -10,7 +10,9 @@ use App\Models\UserCard;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Layout;
 
-new #[Layout('layouts.app')] class extends Component
+use Livewire\Attributes\Title;
+
+new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
 {
     use WithPagination;
 

@@ -6,7 +6,9 @@ use App\Models\UserCard;
 use App\Models\Leaderboard;
 use Carbon\Carbon;
 
-new class extends Component {
+use Livewire\Attributes\Title;
+
+new #[Title('Leaderboards')] class extends Component {
     public $activeTab = 'Cards';
     public $leaderboardData = [];
     public $currentUserRank = null;

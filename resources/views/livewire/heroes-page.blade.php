@@ -6,7 +6,9 @@ use App\Models\Hero;
 use Illuminate\Support\Facades\Auth;
 use Livewire\WithPagination;
 
-new #[Layout('layouts.app')] class extends Component {
+use Livewire\Attributes\Title;
+
+new #[Layout('layouts.app')] #[Title('Heroes')] class extends Component {
     use WithPagination;
 
     public string $search = '';

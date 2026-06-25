@@ -7,7 +7,9 @@ use App\Models\Card;
 use App\Models\Tag;
 use Illuminate\Support\Facades\Http;
 
-new #[Layout('layouts.app')] class extends Component
+use Livewire\Attributes\Title;
+
+new #[Layout('layouts.app')] #[Title('Card Editor')] class extends Component
 {
     #[Url]
     public $cardId = '';

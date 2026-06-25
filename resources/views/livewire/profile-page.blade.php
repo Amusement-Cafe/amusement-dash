@@ -11,7 +11,9 @@ use App\Models\UserCard;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Layout;
 
-new #[Layout('layouts.app')] class extends Component
+use Livewire\Attributes\Title;
+
+new #[Layout('layouts.app')] #[Title('Profile')] class extends Component
 {
     use WithPagination;
 

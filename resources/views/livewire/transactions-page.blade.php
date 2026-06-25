@@ -8,7 +8,9 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Card;
 
-new #[Layout('layouts.app')] class extends Component
+use Livewire\Attributes\Title;
+
+new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
 {
     use WithPagination;
 
