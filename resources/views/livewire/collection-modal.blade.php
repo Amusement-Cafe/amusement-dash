@@ -140,7 +140,7 @@ new class extends Component
 
                     <div style="text-align: center; margin-top: 2rem;">
                         <a :href="'{{ route('cards.index') }}?collectionID=' + colID" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.8rem 2rem; font-size: 1.1rem;">
-                            View All Cards <i class="ph-bold ph-arrow-right"></i>
+                            View Cards <i class="ph-bold ph-arrow-right"></i>
                         </a>
                     </div>
                 </div>

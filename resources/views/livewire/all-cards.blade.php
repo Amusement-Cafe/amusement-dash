@@ -380,7 +380,7 @@ new #[Layout('layouts.app')] #[Title('Cards')] class extends Component
             </div>
         @else
             <h1 style="font-size: 2.5rem; margin: 0; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                All Cards Directory 
+                Card Directory 
                 <span style="color: var(--text-secondary); font-size: 1.5rem; font-weight: normal;">({{ number_format($cards->total()) }})</span>
             </h1>
         @endif
