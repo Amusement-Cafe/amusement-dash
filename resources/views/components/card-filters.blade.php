@@ -4,6 +4,7 @@
     'sortDesc' => true, 
     'hidePromos' => false, 
     'activeFiltersCount' => 0,
+    'allTags' => [],
     'sortOptions' => [
         'random' => 'Random Order',
         'cardID' => 'ID',
@@ -13,7 +14,64 @@
     ]
 ])
 
-<div x-data="{ open: false }" class="glass-panel" style="margin-bottom: 2rem; width: 100%;">
+<div x-data="{ 
+    open: false,
+    tagSearch: '',
+    showSuggestions: false,
+    selectedIndex: -1,
+    get suggestions() {
+        if (this.tagSearch.length < 3) return [];
+        let s = this.tagSearch.toLowerCase();
+        
+        let matches = this.allTags.filter(t => t.toLowerCase().includes(s));
+        
+        matches.sort((a, b) => {
+            let lowerA = a.toLowerCase();
+            let lowerB = b.toLowerCase();
+            let startsWithA = lowerA.startsWith(s);
+            let startsWithB = lowerB.startsWith(s);
+            
+            if (startsWithA && !startsWithB) return -1;
+            if (!startsWithA && startsWithB) return 1;
+            
+            if (lowerA.length !== lowerB.length) return lowerA.length - lowerB.length;
+            
+            return lowerA.localeCompare(lowerB);
+        });
+        
+        return matches.slice(0, 10);
+    },
+    handleKeydown(e) {
+        let max = this.suggestions.length - 1;
+        if (max < 0) return;
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            this.selectedIndex = this.selectedIndex < max ? this.selectedIndex + 1 : max;
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            this.selectedIndex = this.selectedIndex > 0 ? this.selectedIndex - 1 : 0;
+        } else if (e.key === 'Enter') {
+            if (this.selectedIndex >= 0 && this.selectedIndex <= max) {
+                e.preventDefault();
+                let selected = this.suggestions[this.selectedIndex];
+                this.$wire.set('tagInput', selected);
+                this.$wire.addTag();
+                this.tagSearch = '';
+                this.selectedIndex = -1;
+                this.showSuggestions = false;
+            }
+        } else if (e.key === 'Escape') {
+            this.showSuggestions = false;
+            this.selectedIndex = -1;
+        }
+    },
+    resetSelection() {
+        this.selectedIndex = -1;
+        this.showSuggestions = true;
+    },
+    allTags: {{ Illuminate\Support\Js::from($allTags) }}
+}" class="glass-panel" style="margin-bottom: 2rem; width: 100%; position: relative; z-index: 100;">
     <!-- Header / Toggle -->
     <div @click="open = !open" style="padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; border-bottom: 1px solid transparent; transition: border-color 0.3s;" :style="{ borderBottomColor: open ? 'rgba(255,255,255,0.05)' : 'transparent' }">
         <h3 style="margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-primary);">
@@ -136,9 +194,21 @@
             <div style="padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05);">
                 <label style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem; display: block;"><i class="ph-fill ph-tag"></i> Tags Filter</label>
                 <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                    <form wire:submit.prevent="addTag" style="display: flex; gap: 0.5rem; margin: 0;">
-                        <input type="text" wire:model="tagInput" placeholder="Add a tag..." class="input-glass" style="width: 150px; padding: 0.4rem 1rem;">
-                        <button type="submit" class="btn" style="padding: 0.4rem 1rem; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: white; border-radius: 8px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'"><i class="ph-bold ph-plus"></i> Add</button>
+                    <form wire:submit.prevent="addTag" @click.away="showSuggestions = false; selectedIndex = -1;" style="display: flex; gap: 0.5rem; margin: 0; position: relative;">
+                        <input type="text" wire:model="tagInput" x-model="tagSearch" @focus="showSuggestions = true" @input="resetSelection" @keydown="handleKeydown($event)" placeholder="Add a tag..." class="input-glass" style="width: 150px; padding: 0.4rem 1rem;">
+                        
+                        <div x-show="showSuggestions && suggestions.length > 0" x-transition.opacity.duration.200ms style="display: none; position: absolute; top: 100%; left: 0; background: rgba(15, 23, 42, 0.95); border: 1px solid var(--glass-border); border-radius: 8px; z-index: 1000; width: max-content; min-width: 100%; overflow: hidden; backdrop-filter: blur(10px); margin-top: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+                            <template x-for="(suggestion, index) in suggestions" :key="suggestion">
+                                <div @click="$wire.set('tagInput', suggestion); $wire.addTag(); tagSearch = ''; selectedIndex = -1; showSuggestions = false;" 
+                                     :style="`padding: 0.5rem 1rem; color: var(--text-primary); cursor: pointer; transition: background 0.2s; background: ${selectedIndex === index ? 'rgba(255,255,255,0.2)' : 'transparent'};`" 
+                                     @mouseover="selectedIndex = index" 
+                                     @mouseout="selectedIndex = -1">
+                                    #<span x-text="suggestion"></span>
+                                </div>
+                            </template>
+                        </div>
+
+                        <button type="submit" @click="tagSearch = ''" class="btn" style="padding: 0.4rem 1rem; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: white; border-radius: 8px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'"><i class="ph-bold ph-plus"></i> Add</button>
                     </form>
                     
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">

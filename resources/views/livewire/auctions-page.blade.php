@@ -179,6 +179,16 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
         if ($this->filterFav !== '') $activeFiltersCount++;
         if ($this->filterWish !== '') $activeFiltersCount++;
 
+        $allTagsList = Cache::remember('all_distinct_tags', 3600, function() {
+            $rawTags = \App\Models\Tag::raw(function($collection) {
+                return $collection->distinct('tagName', ['status' => 'clear']);
+            });
+            
+            return array_values(array_filter((array)$rawTags, function($tag) {
+                return is_string($tag) && strlen(trim($tag)) > 0;
+            }));
+        });
+
         if ($activeFiltersCount > 0) {
             $allAuctionCardIDs = Auction::where('ended', false)->where('cancelled', false)->distinct('cardID')->pluck('cardID')->toArray();
             
@@ -336,7 +346,8 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
             'selectedCardCollection' => $selectedCardCollection,
             'sellerUser' => $sellerUser,
             'activeFiltersCount' => $activeFiltersCount,
-            'sortOptions' => $sortOptions
+            'sortOptions' => $sortOptions,
+            'allTags' => $allTagsList
         ];
     }
 };
@@ -348,7 +359,7 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
     </div>
 
     <!-- Filters Component -->
-    <x-card-filters :collections="$collections" :tags="$tags" :sortDesc="$sortDesc" :hidePromos="$hidePromos" :activeFiltersCount="$activeFiltersCount" :sortOptions="$sortOptions" />
+    <x-card-filters :collections="$collections" :tags="$tags" :sortDesc="$sortDesc" :hidePromos="$hidePromos" :activeFiltersCount="$activeFiltersCount" :sortOptions="$sortOptions" :allTags="$allTags" />
 
     @if($auctions->count() > 0)
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 2rem; margin-bottom: 2rem;">

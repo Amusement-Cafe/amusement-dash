@@ -330,6 +330,16 @@ new #[Layout('layouts.app')] #[Title('Cards')] class extends Component
         if ($this->filterFav !== '') $activeFiltersCount++;
         if ($this->filterWish !== '') $activeFiltersCount++;
 
+        $allTagsList = Cache::remember('all_distinct_tags', 3600, function() {
+            $rawTags = \App\Models\Tag::raw(function($collection) {
+                return $collection->distinct('tagName', ['status' => 'clear']);
+            });
+            
+            return array_values(array_filter((array)$rawTags, function($tag) {
+                return is_string($tag) && strlen(trim($tag)) > 0;
+            }));
+        });
+
         $activeAuctions = \App\Models\Auction::where('ended', false)
             ->where('cancelled', false)
             ->whereIn('cardID', $cards->pluck('cardID'))
@@ -351,7 +361,8 @@ new #[Layout('layouts.app')] #[Title('Cards')] class extends Component
             'cardAuctions' => $cardAuctions,
             'ownerUser' => $ownerUser,
             'ownerAvatar' => $ownerAvatar,
-            'activeFiltersCount' => $activeFiltersCount
+            'activeFiltersCount' => $activeFiltersCount,
+            'allTags' => $allTagsList
         ];
     }
 };
@@ -376,7 +387,7 @@ new #[Layout('layouts.app')] #[Title('Cards')] class extends Component
     </div>
     
     <!-- Filters Component -->
-    <x-card-filters :collections="$collections" :tags="$tags" :sortDesc="$sortDesc" :hidePromos="$hidePromos" :activeFiltersCount="$activeFiltersCount" />
+    <x-card-filters :collections="$collections" :tags="$tags" :sortDesc="$sortDesc" :hidePromos="$hidePromos" :activeFiltersCount="$activeFiltersCount" :allTags="$allTags" />
     
     <div wire:loading.remove>
         <x-card-grid :cards="$cards" :collections="$collections" :userOwned="$userOwned" :userFavs="$userFavs" :userWishlists="$userWishlists" :cardAuctions="$cardAuctions" />
