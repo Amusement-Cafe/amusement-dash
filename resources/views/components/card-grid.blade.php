@@ -111,7 +111,14 @@
                     'contributorName' => !empty(((array)($card->meta ?? []))['contributor']) ? ($contributors[(string)(((array)($card->meta ?? []))['contributor'])] ?? null) : null
                 ];
             @endphp
-            <div @click="openModal({{ json_encode($cardData) }})" style="cursor: pointer;">
+            <div wire:key="card-{{ $card->cardID }}"
+                 x-data="{ cardItemData: {{ json_encode($cardData) }} }"
+                 @card-updated.window="if ($event.detail.cardId == cardItemData.cardID) { 
+                    if ($event.detail.type === 'fav') cardItemData.fav = $event.detail.value;
+                    if ($event.detail.type === 'wishlist') cardItemData.wishlisted = $event.detail.value;
+                 }"
+                 @click="openModal(cardItemData)" 
+                 style="cursor: pointer;">
                 <x-card-viewer :card="$card" :collectionName="$cardData['collectionName']" :owned="$owned" :fav="$fav" :wishlisted="$wishlisted" />
             </div>
         @endforeach

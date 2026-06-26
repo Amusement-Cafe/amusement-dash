@@ -1,26 +1,28 @@
 @props(['card', 'collectionName' => null, 'owned' => false, 'fav' => false, 'wishlisted' => false])
 
-@php
-    $bColor = 'var(--glass-border)';
-    $shadowNormal = 'var(--glass-shadow)';
-    $shadowHover = '0 10px 25px var(--accent-glow)';
-    
-    if ($wishlisted && $fav) {
-        $bColor = '#fbbf24'; // Wishlist border takes priority
-        $shadowNormal = '-8px 0 15px rgba(244, 114, 182, 0.3), 8px 0 15px rgba(245, 158, 11, 0.3)';
-        $shadowHover = '-10px 10px 25px rgba(244, 114, 182, 0.6), 10px 10px 25px rgba(245, 158, 11, 0.6)';
-    } elseif ($wishlisted) {
-        $bColor = '#fbbf24';
-        $shadowNormal = '0 0 15px rgba(245, 158, 11, 0.3)';
-        $shadowHover = '0 10px 25px rgba(245, 158, 11, 0.6)';
-    } elseif ($fav) {
-        $bColor = '#f472b6';
-        $shadowNormal = '0 0 15px rgba(244, 114, 182, 0.3)';
-        $shadowHover = '0 10px 25px rgba(244, 114, 182, 0.6)';
-    }
-@endphp
-
-<div class="glass-panel" style="padding: 1rem; text-align: center; border: 1px solid {{ $bColor }}; box-shadow: {{ $shadowNormal }}; position: relative; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='{{ $shadowHover }}';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='{{ $shadowNormal }}';">
+<div class="glass-panel" 
+     x-data="{ 
+        isHovered: false,
+        get isFav() { return typeof cardItemData !== 'undefined' ? cardItemData.fav : {{ $fav ? 'true' : 'false' }}; },
+        get isWished() { return typeof cardItemData !== 'undefined' ? cardItemData.wishlisted : {{ $wishlisted ? 'true' : 'false' }}; }
+     }"
+     @mouseenter="isHovered = true"
+     @mouseleave="isHovered = false"
+     :style="`
+        padding: 1rem; text-align: center; position: relative; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;
+        transform: ${isHovered ? 'translateY(-5px)' : 'translateY(0)'};
+        border: 1px solid ${isWished && isFav ? '#fbbf24' : (isWished ? '#fbbf24' : (isFav ? '#f472b6' : 'var(--glass-border)'))};
+        box-shadow: ${
+            isWished && isFav 
+                ? (isHovered ? '-10px 10px 25px rgba(244, 114, 182, 0.6), 10px 10px 25px rgba(245, 158, 11, 0.6)' : '-8px 0 15px rgba(244, 114, 182, 0.3), 8px 0 15px rgba(245, 158, 11, 0.3)')
+                : isWished
+                    ? (isHovered ? '0 10px 25px rgba(245, 158, 11, 0.6)' : '0 0 15px rgba(245, 158, 11, 0.3)')
+                    : isFav
+                        ? (isHovered ? '0 10px 25px rgba(244, 114, 182, 0.6)' : '0 0 15px rgba(244, 114, 182, 0.3)')
+                        : (isHovered ? '0 10px 25px var(--accent-glow)' : 'var(--glass-shadow)')
+        };
+     `"
+>
     
     @if($owned)
         <div style="position: absolute; top: 0; right: 0; background: #34d399; color: black; font-size: 0.7rem; font-weight: bold; padding: 2px 8px; border-bottom-left-radius: 8px; z-index: 10; display: flex; flex-direction: column; align-items: center;">
@@ -31,17 +33,17 @@
         </div>
     @endif
 
-    @if($wishlisted)
-        <div style="position: absolute; top: 0; right: {{ $owned ? '60px' : '0' }}; background: #fbbf24; color: black; font-size: 0.7rem; font-weight: bold; padding: 2px 8px; {{ $owned ? 'border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;' : 'border-bottom-left-radius: 8px;' }} z-index: 10;">
+    <template x-if="isWished">
+        <div :style="`position: absolute; top: 0; right: {{ $owned ? '60px' : '0' }}; background: #fbbf24; color: black; font-size: 0.7rem; font-weight: bold; padding: 2px 8px; ${ {{ $owned ? 'true' : 'false' }} ? 'border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;' : 'border-bottom-left-radius: 8px;' } z-index: 10;`">
             🌟 WISHED
         </div>
-    @endif
+    </template>
 
-    @if($fav)
+    <template x-if="isFav">
         <div style="position: absolute; top: 0; left: 0; background: #f472b6; color: white; font-size: 0.7rem; font-weight: bold; padding: 2px 8px; border-bottom-right-radius: 8px; z-index: 10;">
             ❤️ FAV
         </div>
-    @endif
+    </template>
 
     <div style="height: 250px; background: transparent; border-radius: 8px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
         @if(!empty($card->cardURL))

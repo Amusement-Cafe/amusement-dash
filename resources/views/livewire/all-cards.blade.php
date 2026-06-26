@@ -104,11 +104,7 @@ new #[Layout('layouts.app')] #[Title('Cards')] class extends Component
         $this->dispatch('scroll-to-top');
     }
 
-    #[On('card-updated')]
-    public function refreshCardData()
-    {
-        // Triggers a re-render to update the grid with fresh database state
-    }
+
 
     public function updated($property)
     {
