@@ -19,7 +19,7 @@
         <meta name="twitter:image" content="{{ $ogImage ?? 'https://a.amu.cards/web/CardShowcase.png' }}">
 
         <!-- Link to our base CSS -->
-        <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+        <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}">
         <link rel="icon" type="image/x-icon" href="https://amu.cards/favicon.ico">
         <script src="https://unpkg.com/@phosphor-icons/web"></script>
     </head>
