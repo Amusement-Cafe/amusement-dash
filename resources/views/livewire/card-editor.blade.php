@@ -6,6 +6,7 @@ use Livewire\Attributes\Layout;
 use App\Models\Card;
 use App\Models\Tag;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 
 use Livewire\Attributes\Title;
 
@@ -141,6 +142,20 @@ new #[Layout('layouts.app')] #[Title('Card Editor')] class extends Component
         } catch (\Exception $e) {
             $this->fetchError = "Failed to fetch from Danbooru.";
         }
+    }
+
+    #[\Livewire\Attributes\Computed]
+    public function allTagsList()
+    {
+        return Cache::remember('all_distinct_tags', 3600, function() {
+            $rawTags = \App\Models\Tag::raw(function($collection) {
+                return $collection->distinct('tagName', ['status' => 'clear']);
+            });
+            
+            return array_values(array_filter((array)$rawTags, function($tag) {
+                return is_string($tag) && strlen(trim($tag)) > 0;
+            }));
+        });
     }
 
     public function save()
@@ -301,13 +316,75 @@ new #[Layout('layouts.app')] #[Title('Card Editor')] class extends Component
             </div>
 
             <!-- Tags -->
-            <div class="glass-panel" style="padding: 1.5rem;" x-data="{ newTag: '' }">
+            <div class="glass-panel" style="padding: 1.5rem; position: relative; z-index: 50;" x-data="{ 
+                newTag: '',
+                showSuggestions: false,
+                selectedIndex: -1,
+                get suggestions() {
+                    if (this.newTag.length < 3) return [];
+                    let s = this.newTag.toLowerCase();
+                    let matches = this.allTags.filter(t => t.toLowerCase().includes(s));
+                    matches.sort((a, b) => {
+                        let lowerA = a.toLowerCase();
+                        let lowerB = b.toLowerCase();
+                        let startsWithA = lowerA.startsWith(s);
+                        let startsWithB = lowerB.startsWith(s);
+                        if (startsWithA && !startsWithB) return -1;
+                        if (!startsWithA && startsWithB) return 1;
+                        if (lowerA.length !== lowerB.length) return lowerA.length - lowerB.length;
+                        return lowerA.localeCompare(lowerB);
+                    });
+                    return matches.slice(0, 10);
+                },
+                handleKeydown(e) {
+                    let max = this.suggestions.length - 1;
+                    if (max < 0) return;
+                    
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        this.selectedIndex = this.selectedIndex < max ? this.selectedIndex + 1 : max;
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        this.selectedIndex = this.selectedIndex > 0 ? this.selectedIndex - 1 : 0;
+                    } else if (e.key === 'Enter') {
+                        if (this.selectedIndex >= 0 && this.selectedIndex <= max) {
+                            e.preventDefault();
+                            let selected = this.suggestions[this.selectedIndex];
+                            this.newTag = selected;
+                            this.$wire.addTag(this.newTag);
+                            this.newTag = '';
+                            this.selectedIndex = -1;
+                            this.showSuggestions = false;
+                        }
+                    } else if (e.key === 'Escape') {
+                        this.showSuggestions = false;
+                        this.selectedIndex = -1;
+                    }
+                },
+                resetSelection() {
+                    this.selectedIndex = -1;
+                    this.showSuggestions = true;
+                },
+                allTags: {{ Illuminate\Support\Js::from($this->allTagsList) }}
+            }" @click.away="showSuggestions = false; selectedIndex = -1;">
                 <h3 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">
                     <i class="ph-fill ph-tag" style="color: #a855f7;"></i> Tags
                 </h3>
                 
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                    <input type="text" x-model="newTag" @keydown.enter.prevent="$wire.addTag(newTag); newTag = '';" placeholder="Add a new tag..." style="flex: 1; padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 6px; outline: none;">
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; position: relative;">
+                    <input type="text" x-model="newTag" @focus="showSuggestions = true" @input="resetSelection" @keydown="handleKeydown($event)" @keydown.enter.prevent="if(selectedIndex === -1) { $wire.addTag(newTag); newTag = ''; }" placeholder="Add a new tag..." style="flex: 1; padding: 0.6rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 6px; outline: none;">
+                    
+                    <div x-show="showSuggestions && suggestions.length > 0" x-transition.opacity.duration.200ms style="display: none; position: absolute; top: 100%; left: 0; background: rgba(15, 23, 42, 0.95); border: 1px solid var(--glass-border); border-radius: 8px; z-index: 1000; width: max-content; min-width: 100%; overflow: hidden; backdrop-filter: blur(10px); margin-top: 0.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+                        <template x-for="(suggestion, index) in suggestions" :key="suggestion">
+                            <div @click="newTag = suggestion; $wire.addTag(newTag); newTag = ''; selectedIndex = -1; showSuggestions = false;" 
+                                 :style="`padding: 0.5rem 1rem; color: var(--text-primary); cursor: pointer; transition: background 0.2s; background: ${selectedIndex === index ? 'rgba(255,255,255,0.2)' : 'transparent'};`" 
+                                 @mouseover="selectedIndex = index" 
+                                 @mouseout="selectedIndex = -1">
+                                #<span x-text="suggestion"></span>
+                            </div>
+                        </template>
+                    </div>
+
                     <button @click="$wire.addTag(newTag); newTag = '';" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #a855f7; color: #a855f7; padding: 0 1rem; border-radius: 6px; cursor: pointer;">
                         <i class="ph-bold ph-plus"></i> Add
                     </button>
