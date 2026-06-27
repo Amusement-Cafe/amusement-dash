@@ -22,6 +22,104 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
         $this->id = $id;
     }
 
+    public function confirmTransaction()
+    {
+        if (!$this->id) return;
+
+        $tx = Transaction::where('_id', $this->id)->orWhere('transactionID', $this->id)->first();
+        $currentUser = auth()->user();
+
+        if (!$tx || $tx->status !== 'pending' || $tx->toID !== $currentUser->userID) {
+            $this->dispatch('notify', ['message' => 'Cannot confirm this transaction.', 'type' => 'error']);
+            return;
+        }
+
+        $fromUser = User::where('userID', $tx->fromID)->first();
+        if (!$fromUser) {
+            $this->dispatch('notify', ['message' => 'Sender not found.', 'type' => 'error']);
+            return;
+        }
+
+        // Check if current user has enough tomatoes
+        if ($tx->cost > 0 && $currentUser->tomatoes < $tx->cost) {
+            $this->dispatch('notify', ['message' => 'You do not have enough tomatoes.', 'type' => 'error']);
+            return;
+        }
+
+        // Check if sender still has the cards
+        $cardCounts = array_count_values((array)$tx->cardIDs);
+        foreach ($cardCounts as $cardID => $count) {
+            $userCard = \App\Models\UserCard::where('userID', $tx->fromID)->where('cardID', (int)$cardID)->first();
+            if (!$userCard || $userCard->amount < $count) {
+                $tx->status = 'cancelled';
+                $tx->save();
+                $this->dispatch('notify', ['message' => 'The sender no longer has the required cards.', 'type' => 'error']);
+                return;
+            }
+        }
+
+        // Process transaction
+        if ($tx->cost > 0) {
+            $currentUser->tomatoes -= $tx->cost;
+            $currentUser->save();
+            $fromUser->tomatoes += $tx->cost;
+            $fromUser->save();
+        }
+
+        foreach ($cardCounts as $cardID => $count) {
+            // Deduct from sender
+            $senderCard = \App\Models\UserCard::where('userID', $tx->fromID)->where('cardID', (int)$cardID)->first();
+            if ($senderCard) {
+                $senderCard->amount -= $count;
+                if ($senderCard->amount <= 0) {
+                    $senderCard->delete();
+                } else {
+                    $senderCard->save();
+                }
+            }
+
+            // Add to receiver
+            $receiverCard = \App\Models\UserCard::where('userID', $tx->toID)->where('cardID', (int)$cardID)->first();
+            if ($receiverCard) {
+                $receiverCard->amount += $count;
+                $receiverCard->save();
+            } else {
+                \App\Models\UserCard::create([
+                    'userID' => $tx->toID,
+                    'cardID' => (int)$cardID,
+                    'amount' => $count,
+                ]);
+            }
+        }
+
+        $tx->status = 'completed';
+        $tx->save();
+
+        $this->dispatch('notify', ['message' => 'Transaction confirmed!', 'type' => 'success']);
+    }
+
+    public function declineTransaction()
+    {
+        if (!$this->id) return;
+        $tx = Transaction::where('_id', $this->id)->orWhere('transactionID', $this->id)->first();
+        if ($tx && $tx->status === 'pending' && $tx->toID === auth()->user()->userID) {
+            $tx->status = 'cancelled';
+            $tx->save();
+            $this->dispatch('notify', ['message' => 'Transaction declined.']);
+        }
+    }
+
+    public function cancelTransaction()
+    {
+        if (!$this->id) return;
+        $tx = Transaction::where('_id', $this->id)->orWhere('transactionID', $this->id)->first();
+        if ($tx && $tx->status === 'pending' && $tx->fromID === auth()->user()->userID) {
+            $tx->status = 'cancelled';
+            $tx->save();
+            $this->dispatch('notify', ['message' => 'Transaction cancelled.']);
+        }
+    }
+
     public function with(): array
     {
         $user = auth()->user();
@@ -296,6 +394,23 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
                                 </div>
                             @endif
                         </div>
+
+                        @if($selectedTransaction->status === 'pending')
+                            <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                                @if($isIncoming)
+                                    <button wire:click="confirmTransaction" class="btn-primary" style="flex: 1; padding: 0.8rem; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 0.5rem; transition: background 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                                        <i class="ph-bold ph-check"></i> Confirm
+                                    </button>
+                                    <button wire:click="declineTransaction" class="btn-secondary" style="flex: 1; padding: 0.8rem; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 0.5rem; transition: background 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+                                        <i class="ph-bold ph-x"></i> Decline
+                                    </button>
+                                @else
+                                    <button wire:click="cancelTransaction" class="btn-secondary" style="width: 100%; padding: 0.8rem; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 0.5rem; transition: background 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+                                        <i class="ph-bold ph-x"></i> Cancel
+                                    </button>
+                                @endif
+                            </div>
+                        @endif
 
                         @if(isset($selectedTransaction->transactionID))
                             <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--glass-border); text-align: center;">
