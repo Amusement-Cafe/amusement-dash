@@ -287,29 +287,48 @@ new #[Layout('layouts.app')] #[Title('Profile')] class extends Component
             <div style="flex: 2; min-width: 300px; display: flex; flex-direction: column; gap: 2rem;">
                 
                 <!-- Balances -->
-                <div class="glass-panel" style="padding: 2rem;">
-                    <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <i class="ph ph-wallet" style="color: var(--accent-solid);"></i> Inventory Balances
-                    </h2>
-                    
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;">
-                        <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🍅</div>
-                            <div style="font-size: 1.2rem; font-weight: bold;">{{ number_format($userProfile->tomatoes ?? 0) }}</div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Tomatoes</div>
+                @if(auth()->check() && auth()->user()->userID === $userProfile->userID)
+                    <div class="glass-panel" style="padding: 2rem;" x-data="{ 
+                        showBalances: document.cookie.split('; ').find(row => row.startsWith('hideBalances='))?.split('=')[1] !== 'true',
+                        toggle() {
+                            this.showBalances = !this.showBalances;
+                            document.cookie = 'hideBalances=' + (!this.showBalances) + '; path=/; max-age=31536000';
+                        }
+                    }">
+                        <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="ph ph-wallet" style="color: var(--accent-solid);"></i> Inventory Balances
+                            </div>
+                            <button @click="toggle()" title="Toggle Balances" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0.5rem; border-radius: 8px; transition: background 0.2s, color 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.color='white';" onmouseout="this.style.background='none'; this.style.color='var(--text-secondary)';">
+                                <i :class="showBalances ? 'ph ph-eye-slash' : 'ph ph-eye'" style="font-size: 1.2rem;"></i>
+                            </button>
+                        </h2>
+                        
+                        <div x-show="showBalances" x-transition>
+                            <div style="display: flex; flex-direction: row; justify-content: space-between; gap: 1rem;">
+                                <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; text-align: center; flex: 1;">
+                                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🍅</div>
+                                    <div style="font-size: 1.2rem; font-weight: bold;">{{ number_format($userProfile->tomatoes ?? 0) }}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Tomatoes</div>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; text-align: center; flex: 1;">
+                                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🍋</div>
+                                    <div style="font-size: 1.2rem; font-weight: bold;">{{ number_format($userProfile->lemons ?? 0) }}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Lemons</div>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; text-align: center; flex: 1;">
+                                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🧪</div>
+                                    <div style="font-size: 1.2rem; font-weight: bold;">{{ number_format($userProfile->vials ?? 0) }}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Vials</div>
+                                </div>
+                            </div>
                         </div>
-                        <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🍋</div>
-                            <div style="font-size: 1.2rem; font-weight: bold;">{{ number_format($userProfile->lemons ?? 0) }}</div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Lemons</div>
-                        </div>
-                        <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🧪</div>
-                            <div style="font-size: 1.2rem; font-weight: bold;">{{ number_format($userProfile->vials ?? 0) }}</div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Vials</div>
+                        
+                        <div x-show="!showBalances" x-transition style="text-align: center; color: var(--text-secondary); font-style: italic; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                            Balances hidden
                         </div>
                     </div>
-                </div>
+                @endif
 
                 <!-- Stats & Progress -->
                 <div class="glass-panel" style="padding: 2rem;">
@@ -343,6 +362,31 @@ new #[Layout('layouts.app')] #[Title('Profile')] class extends Component
                     </div>
                 </div>
 
+                @if(!auth()->check() || auth()->user()->userID !== $userProfile->userID)
+                    @if(count($cloutedCollectionsList) > 0)
+                        <div class="glass-panel" style="padding: 2rem;">
+                            <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="ph-fill ph-sparkle" style="color: #a855f7;"></i> Clouted Collections
+                            </h2>
+                            
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                                @foreach($cloutedCollectionsList as $col)
+                                    <a href="{{ route('cards.index') }}?collectionID={{ $col->collectionID }}" style="display: block; text-decoration: none; color: inherit;">
+                                        <div class="glass-panel" style="padding: 1rem; border: 1px solid rgba(168, 85, 247, 0.3); transition: transform 0.2s; text-align: center;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                                            <h3 style="font-size: 1.1rem; color: #a855f7; margin-bottom: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $col->name }}</h3>
+                                            <div style="margin-top: 0.5rem;">
+                                                <span style="background: rgba(168, 85, 247, 0.2); color: #a855f7; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">
+                                                    ID: {{ $col->collectionID }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                @endif
+
             </div>
 
             <!-- Left Column: Fav Card (Now visually left) -->
@@ -369,27 +413,29 @@ new #[Layout('layouts.app')] #[Title('Profile')] class extends Component
 
         </div>
 
-        @if(count($cloutedCollectionsList) > 0)
-            <div class="glass-panel" style="padding: 2rem; margin-top: 2rem;">
-                <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="ph-fill ph-sparkle" style="color: #a855f7;"></i> Clouted Collections
-                </h2>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
-                    @foreach($cloutedCollectionsList as $col)
-                        <a href="{{ route('cards.index') }}?collectionID={{ $col->collectionID }}" style="display: block; text-decoration: none; color: inherit;">
-                            <div class="glass-panel" style="padding: 1rem; border: 1px solid rgba(168, 85, 247, 0.3); transition: transform 0.2s; text-align: center;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                                <h3 style="font-size: 1.1rem; color: #a855f7; margin-bottom: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $col->name }}</h3>
-                                <div style="margin-top: 0.5rem;">
-                                    <span style="background: rgba(168, 85, 247, 0.2); color: #a855f7; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">
-                                        ID: {{ $col->collectionID }}
-                                    </span>
+        @if(auth()->check() && auth()->user()->userID === $userProfile->userID)
+            @if(count($cloutedCollectionsList) > 0)
+                <div class="glass-panel" style="padding: 2rem; margin-top: 2rem;">
+                    <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="ph-fill ph-sparkle" style="color: #a855f7;"></i> Clouted Collections
+                    </h2>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                        @foreach($cloutedCollectionsList as $col)
+                            <a href="{{ route('cards.index') }}?collectionID={{ $col->collectionID }}" style="display: block; text-decoration: none; color: inherit;">
+                                <div class="glass-panel" style="padding: 1rem; border: 1px solid rgba(168, 85, 247, 0.3); transition: transform 0.2s; text-align: center;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                                    <h3 style="font-size: 1.1rem; color: #a855f7; margin-bottom: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $col->name }}</h3>
+                                    <div style="margin-top: 0.5rem;">
+                                        <span style="background: rgba(168, 85, 247, 0.2); color: #a855f7; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">
+                                            ID: {{ $col->collectionID }}
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
-                        </a>
-                    @endforeach
+                            </a>
+                        @endforeach
+                    </div>
                 </div>
-            </div>
+            @endif
         @endif
 
         @if($wishlistCards && $wishlistCards->total() > 0)
