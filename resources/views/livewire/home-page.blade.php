@@ -50,7 +50,7 @@ new #[Layout('layouts.app')] class extends Component
                 'streak' => $user->streaks['daily']['count'] ?? 0
             ];
             
-            $dashboardData['voteNotify'] = $user->preferences['notify']['vote'] ?? false;
+            $dashboardData['dailyNotify'] = $user->preferences['notify']['daily'] ?? false;
 
             // Calculate total stars
             $userCardsAll = \App\Models\UserCard::where('userID', $user->userID)->get(['cardID', 'amount']);
@@ -225,6 +225,13 @@ new #[Layout('layouts.app')] class extends Component
                     <p style="margin: 0; color: var(--text-secondary); font-size: 0.95rem;">
                         {{ $data['daily']['canClaim'] ? 'Your daily rewards are ready!' : 'Next daily available ' . $data['daily']['nextTime'] }}
                     </p>
+                    <p style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.25rem;">
+                        @if($data['dailyNotify'])
+                            <span style="color: #10b981;"><i class="ph-bold ph-bell-ringing"></i> Notifications Enabled</span>
+                        @else
+                            <span style="color: #f59e0b;"><i class="ph-bold ph-bell-slash"></i> Notifications Disabled</span>
+                        @endif
+                    </p>
                 </div>
             </div>
 
@@ -241,33 +248,6 @@ new #[Layout('layouts.app')] class extends Component
         </div>
 
         <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2rem;">
-            <!-- Voting -->
-            <div class="glass-panel" style="flex: 1 1 250px; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; border-left: 4px solid #f43f5e;">
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <i class="ph-fill ph-check-square-offset" style="font-size: 3.5rem; color: #f43f5e;"></i>
-                    <div>
-                        <h3 style="margin: 0 0 0.2rem 0; font-size: 1.2rem;">Vote Rewards</h3>
-                        <p style="margin: 0; color: var(--text-secondary); font-size: 0.85rem;">
-                            @if($data['voteNotify'])
-                                <span style="color: #10b981;"><i class="ph-bold ph-bell-ringing"></i> Notifications Enabled</span>
-                            @else
-                                <span style="color: #f59e0b;"><i class="ph-bold ph-bell-slash"></i> Notifications Disabled</span>
-                            @endif
-                        </p>
-                    </div>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
-                    <a href="https://top.gg/bot/340988108222758934/vote" target="_blank" style="background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 8px; color: white; text-decoration: none; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s; border: 1px solid rgba(255,255,255,0.1);" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-                        <span style="font-weight: bold; display: flex; align-items: center; gap: 0.5rem;"><img src="https://top.gg/favicon.ico" style="width: 16px; height: 16px;" onerror="this.style.display='none'"> Top.gg</span>
-                        <span style="color: #60a5fa; font-size: 0.9rem;">Free Cards</span>
-                    </a>
-                    <a href="https://discordbotlist.com/bots/amusement-club" target="_blank" style="background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 8px; color: white; text-decoration: none; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s; border: 1px solid rgba(255,255,255,0.1);" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-                        <span style="font-weight: bold; display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-discord-logo"></i> DBL</span>
-                        <span style="color: #ef4444; font-size: 0.9rem; font-weight: bold;">Free 🍅</span>
-                    </a>
-                </div>
-            </div>
-
             <!-- Promos -->
             <div class="glass-panel" style="flex: 1 1 250px; padding: 1.5rem; border-left: 4px solid #8b5cf6;">
                 <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
@@ -323,6 +303,29 @@ new #[Layout('layouts.app')] class extends Component
                                 </div>
                             </div>
                         @endforeach
+                    </div>
+                @endif
+            </div>
+
+            <!-- Quests -->
+            <div class="glass-panel" style="flex: 1 1 250px; padding: 1.5rem; border-left: 4px solid #ec4899;">
+                <h3 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-scroll" style="color: #ec4899; font-size: 1.5rem;"></i> Active Quests</h3>
+                @if(count($data['quests']) > 0)
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        @foreach($data['quests'] as $quest)
+                            <div style="background: rgba(0,0,0,0.2); padding: 1.2rem; border-radius: 8px; border-left: 4px solid #ec4899;">
+                                <div style="font-weight: bold; text-transform: uppercase; font-size: 1rem; color: #ec4899; letter-spacing: 1px;">{{ str_replace('_', ' ', $quest->type ?? 'Quest') }}</div>
+                                <div style="font-size: 1.1rem; margin-top: 0.5rem;">ID: {{ $quest->questID }}</div>
+                                <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.8rem; display: flex; align-items: center; gap: 0.3rem; background: rgba(236,72,153,0.1); padding: 0.4rem; border-radius: 4px; display: inline-flex;">
+                                    <i class="ph ph-clock"></i> Expires: {{ \Carbon\Carbon::parse($quest->expires)->diffForHumans() }}
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div style="text-align: center; padding: 4rem 0; opacity: 0.6;">
+                        <i class="ph-light ph-check-circle" style="font-size: 4rem; margin-bottom: 1rem;"></i>
+                        <p style="margin: 0; font-size: 1.1rem;">No active quests right now. You're all caught up!</p>
                     </div>
                 @endif
             </div>
@@ -387,6 +390,94 @@ new #[Layout('layouts.app')] class extends Component
                         <p style="color: var(--text-secondary); margin: 0;">You don't have an active hero.</p>
                     </div>
                 @endif
+
+
+                <!-- Today's Claims -->
+                <div class="glass-panel" style="padding: 2rem;">
+                    <h3 style="margin: 0 0 1.5rem 0; display: flex; align-items: center; justify-content: space-between; font-size: 1.1rem;">
+                        <span style="display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-hand-coins" style="color: #10b981; font-size: 1.3rem;"></i> Today's Claims</span>
+                    </h3>
+                    
+                    @if(count($data['claims']) > 0)
+                        <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                            @foreach($data['claims'] as $tx)
+                                <div style="background: rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                                        <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(16,185,129,0.2); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                                            <i class="ph-bold ph-hand-coins"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: bold; font-size: 0.9rem;">
+                                                {{ $tx->promo ? 'Promo Claim' : 'Regular Claim' }}
+                                            </div>
+                                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                                                <span>{{ $tx->timeClaimed ? \Carbon\Carbon::parse($tx->timeClaimed)->diffForHumans() : 'Unknown date' }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="text-align: right; font-weight: bold;">
+                                        @if($tx->cost > 0)
+                                            <div style="font-size: 0.9rem; display: flex; align-items: center; justify-content: flex-end; gap: 0.2rem;">
+                                                {{ number_format($tx->cost) }} 🍅
+                                            </div>
+                                        @endif
+                                        @if(!empty($tx->cardIDs))
+                                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                                                <i class="ph-fill ph-cards"></i> {{ count($tx->cardIDs) }} Cards
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div style="text-align: center; padding: 1.5rem 0; opacity: 0.6;">
+                            <p style="margin: 0; font-size: 0.9rem;">No claims today.</p>
+                        </div>
+                    @endif
+
+                    <div style="text-align: center; margin-top: 1rem;">
+                        <a href="/claims" style="color: var(--accent-solid); text-decoration: none; font-size: 0.9rem; font-weight: bold; transition: color 0.2s;" onmouseover="this.style.color='var(--accent-glow)'" onmouseout="this.style.color='var(--accent-solid)'">Show All <i class="ph-bold ph-arrow-right"></i></a>
+                    </div>
+                </div>            </div>
+
+            <!-- Right Column -->
+            <div style="flex: 1 1 350px; display: flex; flex-direction: column;">
+
+            <!-- Plots -->
+            @php
+                $totalLemons = 0;
+                $buildingCount = count($data['plots']);
+                foreach($data['plots'] as $plot) {
+                    $totalLemons += $plot->building['storedLemons'] ?? 0;
+                }
+            @endphp
+            <a href="/plots" class="glass-panel" style="break-inside: avoid; margin-bottom: 1.5rem; padding: 1.5rem; display: block; text-decoration: none; color: inherit; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='translateY(0)';">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-house-line" style="color: #eab308; font-size: 1.5rem;"></i> Your Plots</h3>
+                        <p style="margin: 0; color: var(--text-secondary); font-size: 0.95rem;">
+                            {{ $buildingCount }} {{ $buildingCount == 1 ? 'building' : 'buildings' }} constructed.
+                        </p>
+                    </div>
+                    @if($buildingCount > 0)
+                        @if($totalLemons > 0)
+                        <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; color: #eab308; display: flex; align-items: center; gap: 0.5rem;">
+                            {{ number_format($totalLemons) }} 🍋
+                        </div>
+                        @else
+                        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 0.5rem 1rem; border-radius: 8px; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                            0 🍋
+                        </div>
+                        @endif
+                    @else
+                        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 0.5rem 1rem; border-radius: 8px; color: var(--text-secondary); font-size: 0.9rem;">
+                            <i class="ph-light ph-plant" style="font-size: 1.2rem; vertical-align: middle;"></i> None
+                        </div>
+                    @endif
+                </div>
+            </a>
+
             <!-- Transactions -->
             <div class="glass-panel" style="break-inside: avoid; margin-bottom: 1.5rem; padding: 1.5rem; opacity: 0.8;">
                     <h3 style="margin: 0 0 1.5rem 0; display: flex; align-items: center; gap: 0.5rem; font-size: 1.1rem;"><i class="ph-fill ph-arrows-left-right" style="color: var(--text-secondary); font-size: 1.3rem;"></i> Recent Transactions</h3>
@@ -444,123 +535,6 @@ new #[Layout('layouts.app')] class extends Component
                     @else
                         <div class="glass-panel" style="padding: 2rem; text-align: center; border: 1px dashed rgba(255,255,255,0.1);">
                             <p style="margin: 0; font-size: 0.9rem;">No recent transactions.</p>
-                        </div>
-                    @endif
-                </div>
-
-                <!-- Today's Claims -->
-                <div class="glass-panel" style="padding: 2rem;">
-                    <h3 style="margin: 0 0 1.5rem 0; display: flex; align-items: center; justify-content: space-between; font-size: 1.1rem;">
-                        <span style="display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-hand-coins" style="color: #10b981; font-size: 1.3rem;"></i> Today's Claims</span>
-                    </h3>
-                    
-                    @if(count($data['claims']) > 0)
-                        <div style="display: flex; flex-direction: column; gap: 0.8rem;">
-                            @foreach($data['claims'] as $tx)
-                                <div style="background: rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                                    <div style="display: flex; align-items: center; gap: 0.8rem;">
-                                        <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(16,185,129,0.2); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
-                                            <i class="ph-bold ph-hand-coins"></i>
-                                        </div>
-                                        <div>
-                                            <div style="font-weight: bold; font-size: 0.9rem;">
-                                                {{ $tx->promo ? 'Promo Claim' : 'Regular Claim' }}
-                                            </div>
-                                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">
-                                                <span>{{ $tx->timeClaimed ? \Carbon\Carbon::parse($tx->timeClaimed)->diffForHumans() : 'Unknown date' }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div style="text-align: right; font-weight: bold;">
-                                        @if($tx->cost > 0)
-                                            <div style="font-size: 0.9rem; display: flex; align-items: center; justify-content: flex-end; gap: 0.2rem;">
-                                                {{ number_format($tx->cost) }} 🍅
-                                            </div>
-                                        @endif
-                                        @if(!empty($tx->cardIDs))
-                                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">
-                                                <i class="ph-fill ph-cards"></i> {{ count($tx->cardIDs) }} Cards
-                                            </div>
-                                        @endif
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <div style="text-align: center; padding: 1.5rem 0; opacity: 0.6;">
-                            <p style="margin: 0; font-size: 0.9rem;">No claims today.</p>
-                        </div>
-                    @endif
-
-                    <div style="text-align: center; margin-top: 1rem;">
-                        <a href="/claims" style="color: var(--accent-solid); text-decoration: none; font-size: 0.9rem; font-weight: bold; transition: color 0.2s;" onmouseover="this.style.color='var(--accent-glow)'" onmouseout="this.style.color='var(--accent-solid)'">Show All <i class="ph-bold ph-arrow-right"></i></a>
-                    </div>
-                </div>            </div>
-
-            <!-- Right Column -->
-            <div style="flex: 1 1 350px; display: flex; flex-direction: column;">
-
-            <!-- Quests -->
-            <div class="glass-panel" style="break-inside: avoid; margin-bottom: 1.5rem; padding: 1.5rem;">
-                    <h3 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-scroll" style="color: #ec4899; font-size: 1.5rem;"></i> Active Quests</h3>
-                    @if(count($data['quests']) > 0)
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            @foreach($data['quests'] as $quest)
-                                <div style="background: rgba(0,0,0,0.2); padding: 1.2rem; border-radius: 8px; border-left: 4px solid #ec4899;">
-                                    <div style="font-weight: bold; text-transform: uppercase; font-size: 1rem; color: #ec4899; letter-spacing: 1px;">{{ str_replace('_', ' ', $quest->type ?? 'Quest') }}</div>
-                                    <div style="font-size: 1.1rem; margin-top: 0.5rem;">ID: {{ $quest->questID }}</div>
-                                    <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.8rem; display: flex; align-items: center; gap: 0.3rem; background: rgba(236,72,153,0.1); padding: 0.4rem; border-radius: 4px; display: inline-flex;">
-                                        <i class="ph ph-clock"></i> Expires: {{ \Carbon\Carbon::parse($quest->expires)->diffForHumans() }}
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <div style="text-align: center; padding: 4rem 0; opacity: 0.6;">
-                            <i class="ph-light ph-check-circle" style="font-size: 4rem; margin-bottom: 1rem;"></i>
-                            <p style="margin: 0; font-size: 1.1rem;">No active quests right now. You're all caught up!</p>
-                        </div>
-                    @endif
-                </div>
-
-            <!-- Plots -->
-            <div class="glass-panel" style="break-inside: avoid; margin-bottom: 1.5rem; padding: 1.5rem;">
-                    <h3 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-house-line" style="color: #eab308; font-size: 1.5rem;"></i> Your Plots</h3>
-                    @if(count($data['plots']) > 0)
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            @foreach($data['plots'] as $plot)
-                                @php
-                                    $lemons = $plot->building['storedLemons'] ?? 0;
-                                    $bID = strtolower($plot->building['buildingID'] ?? '');
-                                    $bIcon = match(true) {
-                                        str_contains($bID, 'farm') || str_contains($bID, 'lemon') => 'ph-plant',
-                                        str_contains($bID, 'mine') => 'ph-pickaxe',
-                                        str_contains($bID, 'bank') || str_contains($bID, 'vault') => 'ph-bank',
-                                        str_contains($bID, 'factory') => 'ph-factory',
-                                        str_contains($bID, 'shop') || str_contains($bID, 'store') => 'ph-storefront',
-                                        default => 'ph-house'
-                                    };
-                                @endphp
-                                <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                                    <div style="display: flex; align-items: center; gap: 1rem;">
-                                        <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
-                                            <i class="ph-fill {{ $bIcon }}" style="color: var(--accent-solid);"></i>
-                                        </div>
-                                        <div>
-                                            <div style="font-weight: bold;">Plot #{{ $loop->iteration }}</div>
-                                            <div style="font-size: 0.9rem; color: var(--text-secondary);">LVL {{ $plot->building['level'] ?? 1 }} {{ $plot->building['buildingID'] ?? 'Building' }}</div>
-                                        </div>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: bold; font-size: 1.1rem;">
-                                        {{ $lemons }} 🍋
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <div style="text-align: center; padding: 2rem 0; opacity: 0.6;">
-                            <i class="ph-light ph-plant" style="font-size: 3rem; margin-bottom: 1rem;"></i>
-                            <p style="margin: 0;">You don't have any plots yet.</p>
                         </div>
                     @endif
                 </div>

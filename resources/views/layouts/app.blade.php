@@ -96,6 +96,10 @@
                                 <i class="ph-fill ph-hand-coins" style="color: #10b981; font-size: 1.2rem;"></i> Claims
                             </a>
                             
+                            <a href="{{ route('plots.index') }}" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1rem; color: white; text-decoration: none; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                                <i class="ph-fill ph-house-line" style="color: #eab308; font-size: 1.2rem;"></i> Plots
+                            </a>
+                            
                             <a href="{{ route('preferences.index') }}" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1rem; color: white; text-decoration: none; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 <i class="ph-fill ph-gear" style="color: #a855f7; font-size: 1.2rem;"></i> Preferences
                             </a>
@@ -147,6 +151,10 @@
                     
                     <a href="{{ route('claims.index') }}" class="nav-link">
                         <i class="ph-fill ph-hand-coins" style="color: #10b981; font-size: 1.2rem;"></i> Claims
+                    </a>
+                    
+                    <a href="{{ route('plots.index') }}" class="nav-link">
+                        <i class="ph-fill ph-house-line" style="color: #eab308; font-size: 1.2rem;"></i> Plots
                     </a>
                     
                     <a href="{{ route('preferences.index') }}" class="nav-link">
