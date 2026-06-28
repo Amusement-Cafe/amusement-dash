@@ -367,7 +367,7 @@
 
                             <template x-if="!tagsLoading && tags.length > 0">
                                 <template x-for="tag in tags" :key="tag.id">
-                                    <a :href="'{{ route('cards.index') }}?tag=' + encodeURIComponent(tag.tagName)" 
+                                    <a :href="'{{ route('cards.index') }}?tags[0]=' + encodeURIComponent(tag.tagName)" 
                                        style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #60a5fa; padding: 4px 10px; border-radius: 12px; text-decoration: none; font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem; transition: background 0.2s;"
                                        onmouseover="this.style.background='rgba(59, 130, 246, 0.4)'"
                                        onmouseout="this.style.background='rgba(59, 130, 246, 0.2)'">
