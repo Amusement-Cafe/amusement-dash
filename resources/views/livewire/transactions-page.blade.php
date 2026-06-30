@@ -51,6 +51,7 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
         $selectedTransaction = null;
         $selectedOtherUser = null;
         $transactionCards = [];
+        $cardCounts = [];
 
         if ($this->id) {
             $selectedTransaction = Transaction::where('_id', $this->id)->orWhere('transactionID', $this->id)->first();
@@ -62,7 +63,11 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
                 }
 
                 if (!empty($selectedTransaction->cardIDs)) {
-                    $cardIDsToFetch = array_slice($selectedTransaction->cardIDs, 0, 20);
+                    $cardArray = (array) $selectedTransaction->cardIDs;
+                    $cardCounts = array_count_values(array_map('intval', $cardArray));
+                    
+                    $uniqueCardIDs = array_keys($cardCounts);
+                    $cardIDsToFetch = array_slice($uniqueCardIDs, 0, 20);
                     $transactionCards = Card::whereIn('cardID', $cardIDsToFetch)->get();
                 }
             }
@@ -74,6 +79,7 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
             'selectedTransaction' => $selectedTransaction,
             'selectedOtherUser' => $selectedOtherUser,
             'transactionCards' => $transactionCards,
+            'cardCounts' => $cardCounts,
             'currentUser' => $user,
         ];
     }
@@ -103,10 +109,10 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
                                 $isIncoming = $tx->toID === $currentUser->userID;
                                 $color = $isIncoming ? '#10b981' : '#ef4444';
                                 $icon = $isIncoming ? 'ph-arrow-down-left' : 'ph-arrow-up-right';
-                                $statusColor = match($tx->status ?? '') {
-                                    'completed' => '#10b981',
+                                $statusColor = match($tx->status ?? 'confirmed') {
+                                    'confirmed' => '#10b981',
                                     'pending' => '#f59e0b',
-                                    'cancelled' => '#ef4444',
+                                    'declined' => '#ef4444',
                                     default => 'var(--text-secondary)'
                                 };
                                 $otherID = $isIncoming ? $tx->fromID : $tx->toID;
@@ -120,14 +126,16 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
                                     </div>
                                     <div>
                                         <div style="font-weight: bold; font-size: 0.9rem;">
-                                            @if($otherUser && $otherUser->username)
+                                            @if(strtolower($otherID) === 'bot')
+                                                {{ $isIncoming ? 'From' : 'To' }} Amusement Club Bot
+                                            @elseif($otherUser && $otherUser->username)
                                                 {{ $isIncoming ? 'From' : 'To' }} {{ $otherUser->username }}
                                             @else
                                                 {{ $isIncoming ? 'From' : 'To' }} <span style="color: var(--text-secondary);">{{ $otherID }}</span>
                                             @endif
                                         </div>
                                         <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem; display: flex; gap: 0.5rem;">
-                                            <span style="color: {{ $statusColor }}; text-transform: capitalize;">{{ $tx->status ?? 'Completed' }}</span>
+                                            <span style="color: {{ $statusColor }}; text-transform: capitalize;">{{ $tx->status ?? 'confirmed' }}</span>
                                             <span>•</span>
                                             <span>{{ $tx->dateCreated ? \Carbon\Carbon::parse($tx->dateCreated)->diffForHumans() : 'Unknown date' }}</span>
                                         </div>
@@ -167,10 +175,10 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
                 @if($selectedTransaction)
                     @php
                         $isIncoming = $selectedTransaction->toID === $currentUser->userID;
-                        $statusColor = match($selectedTransaction->status ?? '') {
-                            'completed' => '#10b981',
+                        $statusColor = match($selectedTransaction->status ?? 'confirmed') {
+                            'confirmed' => '#10b981',
                             'pending' => '#f59e0b',
-                            'cancelled' => '#ef4444',
+                            'declined' => '#ef4444',
                             default => 'var(--text-secondary)'
                         };
                     @endphp
@@ -191,7 +199,7 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
                             <div>
                                 <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.3rem;">Status</div>
                                 <div style="font-weight: bold; font-size: 1.1rem; color: {{ $statusColor }}; text-transform: capitalize;">
-                                    {{ $selectedTransaction->status ?? 'Completed' }}
+                                    {{ $selectedTransaction->status ?? 'confirmed' }}
                                 </div>
                             </div>
                             
@@ -245,6 +253,14 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
                                         </a>
                                         <div style="color: var(--text-secondary); font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.2rem;" onclick="navigator.clipboard.writeText('{{ $selectedOtherUser->userID }}'); Livewire.dispatch('notify', { message: 'Copied ID to clipboard!' });" title="Click to copy">ID: {{ $selectedOtherUser->userID }} <i class="ph ph-copy"></i></div>
                                     </div>
+                                @elseif(strtolower($isIncoming ? $selectedTransaction->fromID : $selectedTransaction->toID) === 'bot')
+                                    <div style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: var(--glass-border); flex-shrink: 0;">
+                                        <img src="https://amu.cards/favicon.ico" alt="Amusement Club Bot" style="width: 100%; height: 100%; object-fit: cover; transform: scale(1.1);">
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: bold; font-size: 1.2rem;">Amusement Club Bot</div>
+                                        <div style="color: var(--text-secondary); font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.2rem;">Official System Bot</div>
+                                    </div>
                                 @else
                                     <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--glass-border); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
                                         <i class="ph-light ph-user"></i>
@@ -261,12 +277,9 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
                         </div>
                         
                         <div>
-                            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1rem;">
-                                <h3 style="font-size: 1.2rem; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                                    <i class="ph-fill ph-cards" style="color: #ec4899;"></i> Cards Involved
-                                </h3>
+                            <div style="display: flex; justify-content: flex-end; align-items: flex-end; margin-bottom: 1rem;">
                                 <div style="font-size: 0.9rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
-                                    <span>{{ count($selectedTransaction->cardIDs) }} Total (Showing {{ min(count($selectedTransaction->cardIDs), 20) }})</span>
+                                    <span>{{ count($selectedTransaction->cardIDs) }} Total @if(count($cardCounts) > 20) (Showing first 20 unique) @endif</span>
                                     @if(count($selectedTransaction->cardIDs) > 0)
                                         <span style="color: rgba(255,255,255,0.2);">|</span>
                                         @php $txIdForLink = $selectedTransaction->transactionID ?? $selectedTransaction->_id; @endphp
@@ -280,9 +293,14 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
                                     @foreach($transactionCards as $card)
                                         <a href="/cards?search={{ $card->cardID }}" target="_blank" style="text-decoration: none; color: inherit; display: block;">
                                             <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 0.8rem 1rem; border: 1px solid var(--glass-border); transition: transform 0.2s, background 0.2s; display: flex; justify-content: space-between; align-items: center;" onmouseover="this.style.transform='translateY(-2px)'; this.style.background='rgba(255,255,255,0.05)';" onmouseout="this.style.transform='translateY(0)'; this.style.background='rgba(0,0,0,0.3)';">
-                                                <div style="font-size: 0.95rem; font-weight: bold;">
-                                                    {{ $card->displayName ?? $card->cardName }}
-                                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem; font-family: monospace;">ID: {{ $card->cardID }}</div>
+                                                <div style="font-size: 0.95rem; font-weight: bold; display: flex; align-items: center; gap: 0.5rem;">
+                                                    @if(isset($cardCounts[$card->cardID]) && $cardCounts[$card->cardID] > 1)
+                                                        <span style="background: rgba(236, 72, 153, 0.2); color: #ec4899; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.75rem; border: 1px solid rgba(236, 72, 153, 0.3);">x{{ $cardCounts[$card->cardID] }}</span>
+                                                    @endif
+                                                    <div>
+                                                        {{ $card->displayName ?? $card->cardName }}
+                                                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem; font-family: monospace;">ID: {{ $card->cardID }}</div>
+                                                    </div>
                                                 </div>
                                                 <div style="color: var(--text-secondary); font-size: 0.85rem; white-space: nowrap; margin-left: 1rem;">
                                                     {{ str_repeat('⭐', $card->rarity ?? 1) }}
