@@ -14,7 +14,7 @@ class AuthController extends Controller
      */
     public function redirect()
     {
-        return Socialite::driver('discord')->redirect();
+        return Socialite::driver('discord')->setScopes(['identify'])->redirect();
     }
 
     /**
