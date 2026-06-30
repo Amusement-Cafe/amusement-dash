@@ -20,6 +20,14 @@ new #[Layout('layouts.app')] #[Title('Profile')] class extends Component
     #[Url]
     public string $id = '';
 
+    public bool $onlyOwned = false;
+
+    public function updatedOnlyOwned()
+    {
+        $this->resetPage();
+        $this->dispatch('scroll-to-wishlist');
+    }
+
     public function updatingPage()
     {
         $this->dispatch('scroll-to-wishlist');
@@ -65,6 +73,22 @@ new #[Layout('layouts.app')] #[Title('Profile')] class extends Component
         $userWishlists = [];
         
         $wishlistQuery = UserWishlist::where('userID', $userIdToFetch);
+        $totalWishlistsBase = $wishlistQuery->count();
+        
+        if ($this->onlyOwned && auth()->check()) {
+            $wishlistCardIDsStr = UserWishlist::where('userID', $userIdToFetch)->pluck('cardID')->toArray();
+            $wishlistCardIDsInt = array_map('intval', $wishlistCardIDsStr);
+
+            $myOwnedCardIDs = UserCard::where('userID', auth()->user()->userID)
+                ->whereIn('cardID', $wishlistCardIDsInt)
+                ->pluck('cardID')
+                ->map(function($id) { return (string)$id; })
+                ->unique()
+                ->toArray();
+
+            $wishlistQuery->whereIn('cardID', $myOwnedCardIDs);
+        }
+
         $totalWishlists = $wishlistQuery->count();
         
         if ($totalWishlists > 0) {
@@ -139,7 +163,8 @@ new #[Layout('layouts.app')] #[Title('Profile')] class extends Component
             'userWishlists' => $userWishlists,
             'cloutedCollectionsList' => $cloutedCollectionsList,
             'hero' => $hero,
-            'heroLevel' => $heroLevel
+            'heroLevel' => $heroLevel,
+            'totalWishlistsBase' => $totalWishlistsBase ?? 0
         ];
     }
 };
@@ -438,14 +463,32 @@ new #[Layout('layouts.app')] #[Title('Profile')] class extends Component
             @endif
         @endif
 
-        @if($wishlistCards && $wishlistCards->total() > 0)
+        @if(isset($totalWishlistsBase) && $totalWishlistsBase > 0)
             <div id="wishlist-top" class="glass-panel" style="padding: 2rem; margin-top: 2rem;" x-data @scroll-to-wishlist.window="document.getElementById('wishlist-top').scrollIntoView({ behavior: 'smooth' })">
-                <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="ph-fill ph-sparkle" style="color: #ec4899;"></i> Wishlist <span style="color: var(--text-secondary); font-size: 1rem; font-weight: normal;">({{ number_format($wishlistCards->total()) }})</span>
-                </h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <h2 style="font-size: 1.5rem; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="ph-fill ph-sparkle" style="color: #ec4899;"></i> Wishlist <span style="color: var(--text-secondary); font-size: 1rem; font-weight: normal;">({{ number_format($wishlistCards ? $wishlistCards->total() : 0) }})</span>
+                    </h2>
+                    
+                    @if(auth()->check() && auth()->user()->userID !== $userProfile->userID)
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text-secondary); font-size: 0.9rem; background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)';" onmouseout="this.style.background='rgba(255,255,255,0.05)';">
+                                <input type="checkbox" wire:model.live="onlyOwned" style="cursor: pointer;">
+                                Show only cards I own
+                            </label>
+                        </div>
+                    @endif
+                </div>
                 
                 <div wire:loading.remove>
-                    <x-card-grid :cards="$wishlistCards" :collections="$wishlistCollections" :userOwned="$userOwned" :userFavs="$userFavs" :userWishlists="$userWishlists" />
+                    @if($wishlistCards && $wishlistCards->total() > 0)
+                        <x-card-grid :cards="$wishlistCards" :collections="$wishlistCollections" :userOwned="$userOwned" :userFavs="$userFavs" :userWishlists="$userWishlists" />
+                    @else
+                        <div style="padding: 4rem 2rem; text-align: center; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px dashed var(--glass-border);">
+                            <i class="ph-light ph-magnifying-glass" style="font-size: 3rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
+                            <div style="color: var(--text-secondary); font-size: 1.1rem;">No cards found matching your filters.</div>
+                        </div>
+                    @endif
                 </div>
                 
                 <div wire:loading style="width: 100%;">
@@ -455,7 +498,7 @@ new #[Layout('layouts.app')] #[Title('Profile')] class extends Component
                     </div>
                 </div>
 
-                @if($wishlistCards->hasPages())
+                @if($wishlistCards && $wishlistCards->hasPages())
                     <div style="display: flex; justify-content: center; margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
                         {{ $wishlistCards->links('components.custom-pagination') }}
                     </div>
