@@ -23,9 +23,21 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
             $collections = BotCollection::whereIn('collectionID', $collectionIDs)->get()->keyBy('collectionID')->toArray();
         }
 
+        $storeItems = [];
+        try {
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => env('AMUSE_API_KEY')
+            ])->timeout(5)->get(env('AMUSE_API_ROOT') . '/items');
+            
+            if ($response->successful()) {
+                $storeItems = $response->json();
+            }
+        } catch (\Exception $e) {}
+
         return [
             'inventoryItems' => $inventoryItems,
             'collections' => $collections,
+            'storeItems' => $storeItems,
         ];
     }
 };
@@ -50,23 +62,27 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
             @foreach($inventoryItems as $item)
                 @php
-                    $color = match($item->type) {
-                        'pack' => '#8b5cf6',
-                        'material' => '#10b981',
-                        'ticket' => '#f59e0b',
-                        'consumable' => '#ec4899',
-                        'blueprint' => '#06b6d4',
+                    $type = $item->type ?? 'unknown';
+                    $color = match($type) {
+                        'ticket' => '#60a5fa',
+                        'recipe' => '#10b981',
+                        'blueprint' => '#eab308',
+                        'bonus' => '#a855f7',
                         default => '#3b82f6'
                     };
-                    $icon = match($item->type) {
-                        'pack' => 'ph-package',
-                        'material' => 'ph-cube',
+                    $icon = match($type) {
                         'ticket' => 'ph-ticket',
-                        'consumable' => 'ph-flask',
-                        'blueprint' => 'ph-buildings',
+                        'recipe' => 'ph-flask',
+                        'blueprint' => 'ph-house-line',
+                        'bonus' => 'ph-star',
                         default => 'ph-archive'
                     };
                     $colName = $item->collectionID ? ($collections[$item->collectionID]['name'] ?? 'Unknown Collection') : null;
+                    
+                    $storeItem = $storeItems[$item->itemID] ?? null;
+                    $displayName = $storeItem && !empty($storeItem['displayName']) 
+                        ? str_replace('`', '', $storeItem['displayName']) 
+                        : ucfirst($item->itemID ?? $item->type);
                 @endphp
                 <div class="glass-panel" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; border-top: 4px solid {{ $color }}; position: relative; overflow: hidden;">
                     <div style="position: absolute; top: -20px; right: -20px; font-size: 8rem; color: {{ $color }}; opacity: 0.05; pointer-events: none;">
@@ -78,9 +94,9 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
                             <i class="ph-fill {{ $icon }}"></i>
                         </div>
                         <div>
-                            <h3 style="margin: 0; font-size: 1.2rem; text-transform: capitalize;">{{ str_replace('_', ' ', $item->itemID ?? $item->type) }}</h3>
+                            <h3 style="margin: 0; font-size: 1.2rem; text-transform: capitalize;">{{ $displayName }}</h3>
                             <div style="color: {{ $color }}; font-weight: bold; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.2rem;">
-                                {{ $item->type }}
+                                {{ $type }}
                             </div>
                         </div>
                     </div>
