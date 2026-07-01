@@ -208,37 +208,37 @@ new class extends Component {
                     
                     <div style="position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: {{ $color }}; filter: blur(50px); opacity: 0.2; pointer-events: none;"></div>
                     
-                    <div style="display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 16px; background: rgba(255,255,255,0.05); margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.1);">
-                        <i class="ph-fill {{ $icon }}" style="font-size: 2.5rem; color: {{ $color }}; filter: drop-shadow(0 0 10px {{ $color }});"></i>
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;">
+                            <i class="ph-fill {{ $icon }}" style="font-size: 2.5rem; color: {{ $color }}; filter: drop-shadow(0 0 10px {{ $color }});"></i>
+                        </div>
+                        
+                        @if(!$isParsedTicket)
+                        <h3 style="font-size: 1.2rem; font-weight: bold; margin: 0; color: white;">
+                            {{ $displayName }}
+                        </h3>
+                        @else
+                        <h3 style="font-size: 1.3rem; font-weight: bold; margin: 0; color: white; display: flex; align-items: center; gap: 0.5rem;">
+                            x{{ $ticketAmount }} <span style="color: #eab308; text-shadow: 0 0 5px rgba(234, 179, 8, 0.5);">{{ $ticketStars }}</span>
+                        </h3>
+                        @endif
                     </div>
                     
-                    @if(!$isParsedTicket)
-                    <h3 style="font-size: 1.2rem; font-weight: bold; margin-bottom: 0.5rem; color: white;">
-                        {{ $displayName }}
-                    </h3>
-                    @endif
-                    
-                    @if($isParsedTicket)
-                        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
-                            <span style="background: rgba(234, 179, 8, 0.2); color: #eab308; padding: 0.3rem 0.6rem; border-radius: 8px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(234, 179, 8, 0.3); text-shadow: 0 0 5px rgba(234, 179, 8, 0.5);">
-                                {{ $ticketStars }}
-                            </span>
-                            <span style="background: rgba(96, 165, 250, 0.2); color: #60a5fa; padding: 0.3rem 0.6rem; border-radius: 8px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(96, 165, 250, 0.3);">
-                                {{ $ticketAmount }}x Cards
-                            </span>
-                            @if($ticketRandom)
-                                <span style="background: rgba(168, 85, 247, 0.2); color: #a855f7; padding: 0.3rem 0.6rem; border-radius: 8px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(168, 85, 247, 0.3);">
-                                    <i class="ph-bold ph-dice-three"></i> Random
-                                </span>
-                            @else
-                                <span style="background: rgba(52, 211, 153, 0.2); color: #34d399; padding: 0.3rem 0.6rem; border-radius: 8px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(52, 211, 153, 0.3);">
-                                    <i class="ph-bold ph-hand-pointing"></i> Select
-                                </span>
-                            @endif
-                        </div>
-                    @endif
-                    
                     <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem; flex-grow: 1;">
+                        @if($isParsedTicket)
+                            @if($ticketRandom)
+                                <div style="display: flex; align-items: center; gap: 0.4rem; color: #a855f7; margin-bottom: 0.3rem; font-weight: bold;">
+                                    <i class="ph-bold ph-dice-three"></i> Random Drop
+                                </div>
+                                <p style="margin: 0 0 0.8rem 0; font-size: 0.85rem; opacity: 0.8;">Yields random cards from the pool.</p>
+                            @else
+                                <div style="display: flex; align-items: center; gap: 0.4rem; color: #34d399; margin-bottom: 0.3rem; font-weight: bold;">
+                                    <i class="ph-bold ph-hand-pointing"></i> Select Card
+                                </div>
+                                <p style="margin: 0 0 0.8rem 0; font-size: 0.85rem; opacity: 0.8;">Pick specific cards from the pool.</p>
+                            @endif
+                        @endif
+                        
                         @if(isset($item['uses']) && $item['uses'] > 0)
                             <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.3rem;">
                                 <i class="ph-bold ph-arrows-clockwise"></i> {{ $item['uses'] }} Uses
@@ -250,8 +250,8 @@ new class extends Component {
                             </div>
                         @endif
                         @if(isset($item['single']) && $item['single'])
-                            <div style="display: flex; align-items: center; gap: 0.4rem; color: #fbbf24;">
-                                <i class="ph-bold ph-push-pin"></i> Single Use
+                            <div style="display: flex; align-items: center; gap: 0.4rem; color: #fbbf24; margin-bottom: 0.3rem;" title="When purchased, this item will be bound to a single randomly selected collection.">
+                                <i class="ph-bold ph-cards"></i> Single Collection
                             </div>
                         @endif
                     </div>
