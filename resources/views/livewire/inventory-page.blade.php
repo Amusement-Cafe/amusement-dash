@@ -72,17 +72,12 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
         }
     }
 
-    public function useItem($itemId)
+    public function confirmUseItem($itemId = null)
     {
-        $this->dispatch('log-to-console', ['message' => 'useItem called with itemId: ' . $itemId]);
-        $this->selectedItemId = $itemId;
-        $this->showUseItemModal = true;
-    }
-
-    public function confirmUseItem()
-    {
+        if ($itemId) {
+            $this->selectedItemId = $itemId;
+        }
         $this->dispatch('log-to-console', ['message' => 'confirmUseItem called']);
-        $this->showUseItemModal = false;
         
         $user = auth()->user();
         $item = UserInventory::where('userID', $user->userID)
@@ -185,7 +180,13 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
 };
 ?>
 
-<div>
+<div x-data="{ 
+    showConfirmModal: false, 
+    selectedItemId: null,
+    showSearch: @entangle('showCardSearch').live,
+    showReveal: @entangle('showCardReveal').live
+}" 
+x-effect="document.body.style.overflow = (showConfirmModal || showSearch || showReveal) ? 'hidden' : ''">
     <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-end;">
         <div>
             <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 1rem;">
@@ -239,7 +240,7 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
                         $displayName = "Claim Ticket";
                     }
                 @endphp
-                <div class="glass-panel" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; border-top: 4px solid {{ $color }}; position: relative; overflow: hidden;">
+                <div class="glass-panel item-card" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; border-top: 4px solid {{ $color }}; position: relative; overflow: hidden; border-radius: 12px;">
                     <div style="position: absolute; top: -20px; right: -20px; font-size: 8rem; color: {{ $color }}; opacity: 0.05; pointer-events: none;">
                         <i class="ph-fill {{ $icon }}"></i>
                     </div>
@@ -300,9 +301,12 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
                             <span>{{ $item->acquired ? \Carbon\Carbon::parse($item->acquired)->diffForHumans() : 'Unknown' }}</span>
                         </div>
                     </div>
-                    <button wire:click="useItem('{{ $item->id }}')" class="btn btn-primary show-on-hover">
-                        Use Item
-                    </button>
+                    
+                    <div class="item-action-overlay">
+                        <button @click="selectedItemId = '{{ $item->id }}'; showConfirmModal = true;" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.8rem 2rem; box-shadow: 0 0 20px {{ $color }}60; border: 1px solid {{ $color }};">
+                            <i class="ph-bold ph-magic-wand"></i> Use Item
+                        </button>
+                    </div>
                 </div>
             @endforeach
         </div>
@@ -320,18 +324,20 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
         <livewire:card-reveal :revealedCards="$revealedCards" />
     @endif
 
-    @if($showUseItemModal)
-        <div class="modal-backdrop">
-            <div class="modal-content">
-                <h2>Confirm Item Usage</h2>
-                <p>Are you sure you want to use this item? This action cannot be undone.</p>
-                <div class="modal-actions">
-                    <button wire:click="$set('showUseItemModal', false)" class="btn btn-secondary">Cancel</button>
-                    <button wire:click="confirmUseItem" class="btn btn-primary">Confirm</button>
-                </div>
+    <!-- AlpineJS Confirmation Modal (Instant, zero latency) -->
+    <div x-show="showConfirmModal" class="modal-backdrop" x-transition.opacity.duration.300ms style="display: none; z-index: 10005;">
+        <div class="glass-panel modal-content" x-show="showConfirmModal" x-transition.scale.90.duration.300ms style="background: rgba(20,20,30,0.95); border: 1px solid rgba(255,255,255,0.1); padding: 2.5rem; text-align: center; display: flex; flex-direction: column; align-items: center;">
+            <i class="ph-fill ph-warning-circle" style="font-size: 4rem; color: #fbbf24; margin-bottom: 1rem; filter: drop-shadow(0 0 15px rgba(251,191,36,0.4));"></i>
+            <h2 style="margin: 0 0 1rem 0; font-size: 1.8rem; color: white;">Use this Item?</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem; font-size: 1.1rem; line-height: 1.5;">
+                Are you sure you want to use this item? This action will permanently consume the item from your inventory.
+            </p>
+            <div class="modal-actions" style="justify-content: center; gap: 1.5rem; width: 100%; margin-top: 0;">
+                <button @click="showConfirmModal = false" class="btn" style="background: rgba(255,255,255,0.1); color: white; padding: 0.8rem 2.5rem; font-size: 1.1rem; border-radius: 8px;">Cancel</button>
+                <button @click="showConfirmModal = false; $wire.confirmUseItem(selectedItemId)" class="btn btn-primary" style="padding: 0.8rem 2.5rem; font-size: 1.1rem; background: var(--accent-solid); border-radius: 8px; box-shadow: 0 0 20px rgba(99,102,241,0.5);">Confirm</button>
             </div>
         </div>
-    @endif
+    </div>
 
     @if($showCardSearch)
         <livewire:card-search 
@@ -350,12 +356,30 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
     });
 </script>
 <style>
-    .glass-panel .show-on-hover {
+    .item-card {
+        transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+    }
+    
+    .item-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    
+    .item-action-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(10, 10, 15, 0.7);
+        backdrop-filter: blur(8px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
         opacity: 0;
         transition: opacity 0.2s ease-in-out;
+        z-index: 10;
+        border-radius: inherit;
     }
-
-    .glass-panel:hover .show-on-hover {
+    
+    .item-card:hover .item-action-overlay {
         opacity: 1;
     }
 
@@ -375,9 +399,10 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
     .modal-content {
         background-color: #2d3748;
         padding: 2rem;
-        border-radius: 0.5rem;
+        border-radius: 16px;
         width: 90%;
-        max-width: 500px;
+        max-width: 450px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
 
     .modal-actions {

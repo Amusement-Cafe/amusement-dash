@@ -74,13 +74,13 @@ new class extends Component {
             });
         }
 
-        return $query->paginate(8);
+        return $query->paginate(6);
     }
 }; ?>
 
 <div x-data="{ selectedCount: $wire.entangle('selectedCards').live }">
         <div class="modal-backdrop" style="z-index: 10000; padding: 2rem;">
-            <div class="modal-content glass-panel" style="width: 95%; max-width: 1400px; max-height: 95vh; display: flex; flex-direction: column; padding: 2rem; background: var(--bg-dark);">
+            <div class="modal-content glass-panel" style="width: 95%; max-width: 1600px; max-height: 95vh; display: flex; flex-direction: column; padding: 2rem; background: var(--bg-dark);">
                 
                 <!-- Header -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-shrink: 0;">
@@ -110,13 +110,13 @@ new class extends Component {
                 </div>
 
                 <!-- Grid -->
-                <div style="flex: 1; overflow-y: auto; padding-right: 1rem; scrollbar-width: none; -ms-overflow-style: none;">
+                <div style="flex: 1; overflow-y: auto; padding: 1.5rem 1rem 1.5rem 1.5rem; scrollbar-width: none; -ms-overflow-style: none;">
                     <style>
                         .modal-content > div::-webkit-scrollbar {
                             display: none;
                         }
                     </style>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
                         @foreach($this->cards as $card)
                             <div wire:click="selectCard({{ $card->cardID }})" style="position: relative;">
                                 <x-card-viewer :card="$card" :collectionName="$card->collectionID" />
