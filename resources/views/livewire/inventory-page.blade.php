@@ -118,17 +118,32 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
                 if ($isParsedTicket) {
                     $query = \App\Models\Card::where('rarity', $this->ticketStars)->where('canDrop', true);
 
-                    if ($storeItem && isset($storeItem['single']) && $storeItem['single']) {
-                        $this->ticketCollection = \App\Models\BotCollection::inRandomOrder()->first()->collectionID;
-                        $query->where('collectionID', $this->ticketCollection);
-                    } else if (isset($item->collectionID) && $item->collectionID !== 'random') {
-                        $this->ticketCollection = $item->collectionID;
-                        $query->where('collectionID', $this->ticketCollection);
+                    if ($this->ticketStars == 4) {
+                        $this->ticketCollection = 'special';
+                        $query->where('collectionID', 'special');
+                    } else {
+                        $excludedCols = \App\Models\BotCollection::all()->filter(function($col) {
+                            return !empty($col->promo) || in_array($col->collectionID, ['limitedcraft', 'special']);
+                        })->pluck('collectionID')->toArray();
+                        
+                        $query->whereNotIn('collectionID', $excludedCols);
+
+                        if ($storeItem && isset($storeItem['single']) && $storeItem['single']) {
+                            $validCols = \App\Models\BotCollection::all()->filter(function($col) use ($excludedCols) {
+                                return !in_array($col->collectionID, $excludedCols);
+                            });
+                            $this->ticketCollection = $validCols->random()->collectionID;
+                            $query->where('collectionID', $this->ticketCollection);
+                        } else if (isset($item->collectionID) && $item->collectionID !== 'random') {
+                            $this->ticketCollection = $item->collectionID;
+                            $query->where('collectionID', $this->ticketCollection);
+                        }
                     }
 
                     if ($ticketRandom) {
                         $this->dispatch('log-to-console', ['message' => 'Ticket is random.']);
-                        $this->revealedCards = $query->inRandomOrder()->limit($this->ticketAmount)->get()->pluck('cardID')->toArray();
+                        $cards = $query->get();
+                        $this->revealedCards = $cards->shuffle()->take($this->ticketAmount)->pluck('cardID')->toArray();
                         $this->showCardReveal = true;
                         $item->delete();
                     } else {

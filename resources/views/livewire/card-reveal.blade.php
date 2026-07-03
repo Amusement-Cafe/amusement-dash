@@ -17,22 +17,18 @@ new class extends Component {
 
     public function revealAll()
     {
-        foreach ($this->cards as $index => $card) {
+        $delay = 0;
+        foreach ($this->cards as $card) {
             if (!in_array($card->cardID, $this->flippedCards)) {
-                $this->js("setTimeout(() => { Livewire.dispatch('reveal-card', ['cardId' => " . $card->cardID . "]) }, " . ($index * 200) . ")");
+                $this->flippedCards[] = $card->cardID;
+                $this->js("setTimeout(() => { window.dispatchEvent(new CustomEvent('flip-card-ui', { detail: { cardId: " . $card->cardID . " } })); }, " . $delay . ");");
+                $delay += 200;
             }
         }
     }
 
     public function flipCard($cardId)
     {
-        $this->revealCard(['cardId' => $cardId]);
-    }
-
-    #[On('reveal-card')]
-    public function revealCard($data)
-    {
-        $cardId = $data['cardId'];
         if (!in_array($cardId, $this->flippedCards)) {
             $this->flippedCards[] = $cardId;
         }
@@ -59,6 +55,10 @@ new class extends Component {
             animation: fadeInReveal 0.5s forwards ease-out;
             overflow-y: auto;
             display: flex;
+            scrollbar-width: none;
+        }
+        .card-reveal-container::-webkit-scrollbar {
+            display: none;
         }
         
         .card-reveal-content-wrapper {
@@ -230,7 +230,7 @@ new class extends Component {
         
         .card-front {
             transform: rotateY(180deg);
-            background: #000;
+            background: transparent;
         }
         
         /* Dynamic Glare and Foil on Card Front */
@@ -347,8 +347,8 @@ new class extends Component {
                             $wire.flipCard({{ $card->cardID }});
                         }
                      "
-                     @reveal-card.window="
-                        if ($event.detail[0].cardId == {{ $card->cardID }} && !flipped) {
+                     @flip-card-ui.window="
+                        if ($event.detail.cardId == {{ $card->cardID }} && !flipped) {
                             flipped = true;
                             justFlipped = true;
                             setTimeout(() => justFlipped = false, 3000);
@@ -374,7 +374,7 @@ new class extends Component {
                                 </div>
                             </div>
                             <div class="card-face card-front">
-                                <img src="{{ $card->cardURL }}" alt="{{ $card->displayName }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 16px;" />
+                                <img src="{{ $card->cardURL }}" alt="{{ $card->displayName }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 16px; filter: brightness(0.9) saturate(1.15);" />
                             </div>
                         </div>
                     </div>
@@ -387,10 +387,11 @@ new class extends Component {
                     <button wire:click="revealAll" class="btn" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 1.2rem; padding: 1rem 2rem; backdrop-filter: blur(5px);">
                         <i class="ph-bold ph-magic-wand"></i> Reveal All
                     </button>
+                @else
+                    <button wire:click="closeReveal" class="btn btn-primary" style="font-size: 1.2rem; padding: 1rem 2.5rem; box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);">
+                        <i class="ph-bold ph-check"></i> Continue
+                    </button>
                 @endif
-                <button wire:click="closeReveal" class="btn btn-primary" style="font-size: 1.2rem; padding: 1rem 2.5rem; box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);">
-                    <i class="ph-bold ph-check"></i> Continue
-                </button>
             </div>
         </div>
     </div>

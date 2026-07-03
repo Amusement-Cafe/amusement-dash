@@ -3,9 +3,10 @@
 use Livewire\Volt\Component;
 use App\Models\Card;
 use Livewire\WithPagination;
+use Livewire\WithoutUrlPagination;
 
 new class extends Component {
-    use WithPagination;
+    use WithPagination, WithoutUrlPagination;
 
     public $ticketStars = 0;
     public $ticketAmount = 0;
