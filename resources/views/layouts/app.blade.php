@@ -186,7 +186,7 @@
         </nav>
 
         <!-- Main Content Slot -->
-        <main class="container animate-fade-in" style="animation-delay: 0.2s;">
+        <main class="container" style="animation-delay: 0.2s;">
             {{ $slot }}
         </main>
 

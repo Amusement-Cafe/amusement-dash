@@ -7,8 +7,150 @@ use App\Models\BotCollection;
 
 use Livewire\Attributes\Title;
 
+use Livewire\Attributes\On; 
+
 new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
 {
+    public $showUseItemModal = false;
+    public $selectedItemId;
+    public $revealedCards = [];
+    public $showCardReveal = false;
+
+    public $showCardSearch = false;
+    public $ticketStars = 0;
+    public $ticketAmount = 0;
+    public $ticketCollection = null;
+
+    #[On('cards-selected')]
+    public function cardsSelected($data)
+    {
+        $this->revealedCards = $data['cards'];
+        $this->showCardSearch = false;
+        $this->showCardReveal = true;
+
+        $user = auth()->user();
+        $item = UserInventory::where('userID', $user->userID)
+            ->get()
+            ->firstWhere('id', $this->selectedItemId);
+            
+        if($item) {
+            $item->delete();
+        }
+    }
+
+    #[On('close-search')]
+    public function closeCardSearch()
+    {
+        $this->showCardSearch = false;
+    }
+
+    #[On('close-reveal')]
+    public function closeCardReveal()
+    {
+        $this->addCardsToInventory($this->revealedCards);
+        $this->showCardReveal = false;
+    }
+
+    public function addCardsToInventory($cardIds)
+    {
+        $user = auth()->user();
+        foreach ($cardIds as $cardId) {
+            $userCard = \App\Models\UserCard::where('userID', $user->userID)
+                ->where('cardID', $cardId)
+                ->first();
+
+            if ($userCard) {
+                $userCard->increment('amount');
+            } else {
+                \App\Models\UserCard::create([
+                    'userID' => $user->userID,
+                    'cardID' => $cardId,
+                    'amount' => 1,
+                    'acquired' => now(),
+                ]);
+            }
+        }
+    }
+
+    public function useItem($itemId)
+    {
+        $this->dispatch('log-to-console', ['message' => 'useItem called with itemId: ' . $itemId]);
+        $this->selectedItemId = $itemId;
+        $this->showUseItemModal = true;
+    }
+
+    public function confirmUseItem()
+    {
+        $this->dispatch('log-to-console', ['message' => 'confirmUseItem called']);
+        $this->showUseItemModal = false;
+        
+        $user = auth()->user();
+        $item = UserInventory::where('userID', $user->userID)
+            ->get()
+            ->firstWhere('id', $this->selectedItemId);
+
+        if (!$item) {
+            $this->dispatch('log-to-console', ['message' => 'Item not found or not owned by user.']);
+            return;
+        }
+
+        if ($item->type === 'ticket') {
+            $this->dispatch('log-to-console', ['message' => 'Item is a ticket.']);
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => env('AMUSE_API_KEY')
+            ])->timeout(5)->get(env('AMUSE_API_ROOT') . '/items');
+            
+            if ($response->successful()) {
+                $storeItems = $response->json();
+                $storeItem = $storeItems[$item->itemID] ?? null;
+                $displayName = $storeItem && !empty($storeItem['displayName']) 
+                    ? str_replace('`', '', $storeItem['displayName']) 
+                    : ucfirst($item->itemID ?? $item->type);
+
+                $isParsedTicket = false;
+                $ticketAmount = 1;
+                $ticketRandom = false;
+                $ticketStars = '';
+                
+                if (preg_match('/^(\d+)x\s+(Random\s+)?([★]+)\s+Claim Ticket/i', trim($displayName), $matches)) {
+                    $isParsedTicket = true;
+                    $this->ticketAmount = $matches[1];
+                    $ticketRandom = !empty(trim($matches[2] ?? ''));
+                    $this->ticketStars = mb_strlen($matches[3], 'UTF-8');
+                    $this->dispatch('log-to-console', ['message' => "isParsedTicket: $isParsedTicket, ticketAmount: $this->ticketAmount, ticketRandom: $ticketRandom, ticketStars: $this->ticketStars"]);
+                }
+
+                if ($isParsedTicket) {
+                    $query = \App\Models\Card::where('rarity', $this->ticketStars)->where('canDrop', true);
+
+                    if ($storeItem && isset($storeItem['single']) && $storeItem['single']) {
+                        $this->ticketCollection = \App\Models\BotCollection::inRandomOrder()->first()->collectionID;
+                        $query->where('collectionID', $this->ticketCollection);
+                    } else if (isset($item->collectionID) && $item->collectionID !== 'random') {
+                        $this->ticketCollection = $item->collectionID;
+                        $query->where('collectionID', $this->ticketCollection);
+                    }
+
+                    if ($ticketRandom) {
+                        $this->dispatch('log-to-console', ['message' => 'Ticket is random.']);
+                        $this->revealedCards = $query->inRandomOrder()->limit($this->ticketAmount)->get()->pluck('cardID')->toArray();
+                        $this->showCardReveal = true;
+                        $item->delete();
+                    } else {
+                        $this->dispatch('log-to-console', ['message' => 'Ticket is not random.']);
+                        $this->showCardSearch = true;
+                    }
+                } else {
+                    $this->dispatch('log-to-console', ['message' => 'Could not parse ticket name.']);
+                }
+            } else {
+                $this->dispatch('log-to-console', ['message' => 'Could not fetch store items.']);
+            }
+        } else {
+            $this->dispatch('log-to-console', ['message' => 'Item is not a ticket.']);
+        }
+    }
+
     public function with(): array
     {
         $user = auth()->user();
@@ -84,16 +226,16 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
                         ? str_replace('`', '', $storeItem['displayName']) 
                         : ucfirst($item->itemID ?? $item->type);
                         
-                    $isParsedTicket = false;
-                    $ticketAmount = 1;
-                    $ticketRandom = false;
-                    $ticketStars = '';
+                    $itemIsParsedTicket = false;
+                    $itemTicketAmount = 1;
+                    $itemTicketRandom = false;
+                    $itemTicketStars = '';
                     
                     if ($type === 'ticket' && preg_match('/^(\d+)x\s+(Random\s+)?([★]+)\s+Claim Ticket/i', trim($displayName), $matches)) {
-                        $isParsedTicket = true;
-                        $ticketAmount = $matches[1];
-                        $ticketRandom = !empty(trim($matches[2] ?? ''));
-                        $ticketStars = $matches[3];
+                        $itemIsParsedTicket = true;
+                        $itemTicketAmount = $matches[1];
+                        $itemTicketRandom = !empty(trim($matches[2] ?? ''));
+                        $itemTicketStars = $matches[3];
                         $displayName = "Claim Ticket";
                     }
                 @endphp
@@ -107,11 +249,11 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
                             <i class="ph-fill {{ $icon }}"></i>
                         </div>
                         <div>
-                            @if(!$isParsedTicket)
+                            @if(!$itemIsParsedTicket)
                             <h3 style="margin: 0; font-size: 1.2rem; text-transform: capitalize;">{{ $displayName }}</h3>
                             @else
                             <h3 style="font-size: 1.3rem; font-weight: bold; margin: 0; color: white; display: flex; align-items: center; gap: 0.5rem;">
-                                x{{ $ticketAmount }} <span style="color: #eab308; text-shadow: 0 0 5px rgba(234, 179, 8, 0.5);">{{ $ticketStars }}</span>
+                                x{{ $itemTicketAmount }} <span style="color: #eab308; text-shadow: 0 0 5px rgba(234, 179, 8, 0.5);">{{ $itemTicketStars }}</span>
                             </h3>
                             @endif
                             <div style="color: {{ $color }}; font-weight: bold; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.2rem;">
@@ -121,8 +263,8 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
                     </div>
 
                     <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; font-size: 0.9rem;">
-                        @if($isParsedTicket)
-                            @if($ticketRandom)
+                        @if($itemIsParsedTicket)
+                            @if($itemTicketRandom)
                                 <div style="display: flex; align-items: center; gap: 0.4rem; color: #a855f7; margin-bottom: 0.3rem; font-weight: bold;">
                                     <i class="ph-bold ph-dice-three"></i> Random Drop
                                 </div>
@@ -158,6 +300,9 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
                             <span>{{ $item->acquired ? \Carbon\Carbon::parse($item->acquired)->diffForHumans() : 'Unknown' }}</span>
                         </div>
                     </div>
+                    <button wire:click="useItem('{{ $item->id }}')" class="btn btn-primary show-on-hover">
+                        Use Item
+                    </button>
                 </div>
             @endforeach
         </div>
@@ -170,4 +315,75 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
             </p>
         </div>
     @endif
+
+    @if($showCardReveal)
+        <livewire:card-reveal :revealedCards="$revealedCards" />
+    @endif
+
+    @if($showUseItemModal)
+        <div class="modal-backdrop">
+            <div class="modal-content">
+                <h2>Confirm Item Usage</h2>
+                <p>Are you sure you want to use this item? This action cannot be undone.</p>
+                <div class="modal-actions">
+                    <button wire:click="$set('showUseItemModal', false)" class="btn btn-secondary">Cancel</button>
+                    <button wire:click="confirmUseItem" class="btn btn-primary">Confirm</button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if($showCardSearch)
+        <livewire:card-search 
+            :ticketStars="$ticketStars" 
+            :ticketAmount="$ticketAmount" 
+            :ticketCollection="$ticketCollection" 
+        />
+    @endif
 </div>
+
+<script>
+    document.addEventListener('livewire:init', () => {
+       Livewire.on('log-to-console', (event) => {
+           console.log(event[0].message);
+        });
+    });
+</script>
+<style>
+    .glass-panel .show-on-hover {
+        opacity: 0;
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    .glass-panel:hover .show-on-hover {
+        opacity: 1;
+    }
+
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9998;
+    }
+
+    .modal-content {
+        background-color: #2d3748;
+        padding: 2rem;
+        border-radius: 0.5rem;
+        width: 90%;
+        max-width: 500px;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+</style>
