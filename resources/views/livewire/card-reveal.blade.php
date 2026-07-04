@@ -185,12 +185,14 @@ new class extends Component {
             position: absolute;
             width: 100%;
             height: 100%;
+            -webkit-backface-visibility: hidden;
             backface-visibility: hidden;
             border-radius: 16px;
-            overflow: hidden;
+            /* Removed overflow: hidden; to prevent breaking backface-visibility in Firefox */
         }
 
         .card-back {
+            transform: rotateY(0deg);
             border: 2px solid #a855f7;
             display: flex;
             justify-content: center;
@@ -223,6 +225,7 @@ new class extends Component {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: inherit;
             background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.3) 0%, transparent 60%);
             pointer-events: none;
             mix-blend-mode: overlay;
@@ -238,6 +241,7 @@ new class extends Component {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: inherit;
             background: radial-gradient(circle at calc(100% - var(--mouse-x, 50%)) var(--mouse-y, 50%), rgba(255,255,255,0.4) 0%, transparent 50%),
                         linear-gradient(125deg, transparent 20%, rgba(255,255,255,0.2) 40%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.2) 60%, transparent 80%);
             background-position: center, calc((100% - var(--mouse-x, 50%) - 50%) * 1.5) center;
