@@ -8,11 +8,21 @@ new class extends Component {
     public $revealedCards = [];
     public $cards;
     public $flippedCards = [];
+    public $userOwned = [];
 
     public function mount($revealedCards)
     {
         $this->revealedCards = $revealedCards;
         $this->cards = Card::whereIn('cardID', $this->revealedCards)->get();
+
+        if (auth()->check()) {
+            $userCards = \App\Models\UserCard::where('userID', auth()->user()->userID)
+                ->whereIn('cardID', $this->cards->pluck('cardID'))
+                ->get();
+            foreach ($userCards as $uc) {
+                $this->userOwned[$uc->cardID] = $uc->amount ?? 1;
+            }
+        }
     }
 
     public function revealAll()
@@ -379,6 +389,16 @@ new class extends Component {
                             </div>
                             <div class="card-face card-front">
                                 <img src="{{ $card->cardURL }}" alt="{{ $card->displayName }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 16px; filter: brightness(0.9) saturate(1.15);" />
+                                
+                                @php $ownedCount = $userOwned[$card->cardID] ?? 0; @endphp
+                                @if($ownedCount > 0)
+                                    <div style="position: absolute; top: 0; right: 0; background: #34d399; color: black; font-size: 0.8rem; font-weight: bold; padding: 4px 10px; border-bottom-left-radius: 12px; z-index: 10; display: flex; flex-direction: column; align-items: center; border-top-right-radius: 14px;">
+                                        <span>OWNED</span>
+                                        @if(is_numeric($ownedCount) && $ownedCount > 1)
+                                            <span style="font-size: 0.75rem; background: rgba(0,0,0,0.15); border-radius: 4px; padding: 1px 6px; margin-top: 2px;">{{ $ownedCount }}x</span>
+                                        @endif
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>

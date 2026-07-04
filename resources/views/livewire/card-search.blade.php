@@ -57,6 +57,22 @@ new class extends Component {
         }
     }
 
+    public function with(): array
+    {
+        $userOwned = [];
+        if (auth()->check()) {
+            $userCards = \App\Models\UserCard::where('userID', auth()->user()->userID)
+                ->whereIn('cardID', collect($this->cards->items())->pluck('cardID'))
+                ->get();
+            foreach ($userCards as $uc) {
+                $userOwned[$uc->cardID] = $uc->amount ?? 1;
+            }
+        }
+        return [
+            'userOwned' => $userOwned
+        ];
+    }
+
     public function getCardsProperty()
     {
         $query = Card::where('rarity', $this->ticketStars);
@@ -120,7 +136,7 @@ new class extends Component {
                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
                         @foreach($this->cards as $card)
                             <div wire:click="selectCard({{ $card->cardID }})" style="position: relative;">
-                                <x-card-viewer :card="$card" :collectionName="$card->collectionID" />
+                                <x-card-viewer :card="$card" :collectionName="$card->collectionID" :owned="$userOwned[$card->cardID] ?? false" />
                                 
                                 @if(in_array($card->cardID, $selectedCards))
                                     <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(99, 102, 241, 0.2); border: 3px solid var(--accent-solid); border-radius: 16px; display: flex; align-items: center; justify-content: center; z-index: 20; pointer-events: none; backdrop-filter: blur(2px);">
