@@ -19,8 +19,17 @@ new class extends Component {
             $userCards = \App\Models\UserCard::where('userID', auth()->user()->userID)
                 ->whereIn('cardID', $this->cards->pluck('cardID'))
                 ->get();
+                
+            $drawnCounts = array_count_values($this->revealedCards);
+            
             foreach ($userCards as $uc) {
-                $this->userOwned[$uc->cardID] = $uc->amount ?? 1;
+                $currentAmount = $uc->amount ?? 1;
+                $justDrawn = $drawnCounts[$uc->cardID] ?? 0;
+                $oldAmount = max(0, $currentAmount - $justDrawn);
+                
+                if ($oldAmount > 0) {
+                    $this->userOwned[$uc->cardID] = $oldAmount;
+                }
             }
         }
     }
@@ -390,13 +399,15 @@ new class extends Component {
                             <div class="card-face card-front">
                                 <img src="{{ $card->cardURL }}" alt="{{ $card->displayName }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 16px; filter: brightness(0.9) saturate(1.15);" />
                                 
-                                @php $ownedCount = $userOwned[$card->cardID] ?? 0; @endphp
+                                @php $ownedCount = $this->userOwned[$card->cardID] ?? 0; @endphp
                                 @if($ownedCount > 0)
                                     <div style="position: absolute; top: 0; right: 0; background: #34d399; color: black; font-size: 0.8rem; font-weight: bold; padding: 4px 10px; border-bottom-left-radius: 12px; z-index: 10; display: flex; flex-direction: column; align-items: center; border-top-right-radius: 14px;">
                                         <span>OWNED</span>
-                                        @if(is_numeric($ownedCount) && $ownedCount > 1)
-                                            <span style="font-size: 0.75rem; background: rgba(0,0,0,0.15); border-radius: 4px; padding: 1px 6px; margin-top: 2px;">{{ $ownedCount }}x</span>
-                                        @endif
+                                        <span style="font-size: 0.75rem; background: rgba(0,0,0,0.15); border-radius: 4px; padding: 1px 6px; margin-top: 2px;">{{ $ownedCount }}x</span>
+                                    </div>
+                                @else
+                                    <div style="position: absolute; top: 0; right: 0; background: #fbbf24; color: black; font-size: 0.8rem; font-weight: bold; padding: 4px 10px; border-bottom-left-radius: 12px; z-index: 10; border-top-right-radius: 14px; box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);">
+                                        NEW!
                                     </div>
                                 @endif
                             </div>

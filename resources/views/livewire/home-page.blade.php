@@ -160,6 +160,11 @@ new #[Layout('layouts.app')] class extends Component
             $xpNeeded = $nextLevelXp - $currentLevelXp;
             $xpPercent = $xpNeeded > 0 ? min(100, max(0, ($xpProgress / $xpNeeded) * 100)) : 100;
             
+            $userStats = \App\Models\UserStat::where('userID', $user->userID)
+                ->where('daily', $user->lastDaily)
+                ->first();
+            $dashboardData['nextClaimCost'] = (($userStats->claims ?? 0) + 1) * 50;
+            
             $dashboardData['userLevel'] = [
                 'level' => $userLvl,
                 'xp' => $xp,
@@ -242,6 +247,17 @@ new #[Layout('layouts.app')] class extends Component
                     <h3 style="margin: 0 0 0.2rem 0; font-size: 1.2rem;">Inventory</h3>
                     <p style="margin: 0; color: var(--text-secondary); font-size: 0.95rem;">
                         {{ count($data['inventory']) }} items stored. Click to view.
+                    </p>
+                </div>
+            </a>
+            
+            <!-- Claim Cards -->
+            <a href="/claims" class="glass-panel" style="flex: 1 1 250px; padding: 1.5rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #f43f5e; text-decoration: none; color: inherit; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='translateY(0)';">
+                <i class="ph-fill ph-cards" style="font-size: 3.5rem; color: #f43f5e;"></i>
+                <div>
+                    <h3 style="margin: 0 0 0.2rem 0; font-size: 1.2rem;">Claim Cards</h3>
+                    <p style="margin: 0; color: var(--text-secondary); font-size: 0.95rem;">
+                        Next claim: <strong>{{ number_format($data['nextClaimCost'] ?? 50) }} 🍅</strong>
                     </p>
                 </div>
             </a>
@@ -437,7 +453,7 @@ new #[Layout('layouts.app')] class extends Component
                     @endif
 
                     <div style="text-align: center; margin-top: 1rem;">
-                        <a href="/claims" style="color: var(--accent-solid); text-decoration: none; font-size: 0.9rem; font-weight: bold; transition: color 0.2s;" onmouseover="this.style.color='var(--accent-glow)'" onmouseout="this.style.color='var(--accent-solid)'">Show All <i class="ph-bold ph-arrow-right"></i></a>
+                        <a href="/claims?tab=history" style="color: var(--accent-solid); text-decoration: none; font-size: 0.9rem; font-weight: bold; transition: color 0.2s;" onmouseover="this.style.color='var(--accent-glow)'" onmouseout="this.style.color='var(--accent-solid)'">Show All <i class="ph-bold ph-arrow-right"></i></a>
                     </div>
                 </div>            </div>
 
