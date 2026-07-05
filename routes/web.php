@@ -19,6 +19,7 @@ Volt::route('/claims', 'claims-page')->name('claims.index')->middleware('auth');
 Volt::route('/card-editor', 'card-editor')->name('card.editor')->middleware('auth');
 Volt::route('/leaderboards', 'leaderboards-page')->name('leaderboards.index');
 Volt::route('/plots', 'plots-page')->name('plots.index')->middleware('auth');
+Volt::route('/admin', 'admin-panel')->name('admin.index')->middleware('auth');
 
 use App\Http\Controllers\AuthController;
 

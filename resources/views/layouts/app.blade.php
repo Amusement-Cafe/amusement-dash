@@ -109,6 +109,12 @@
                                 <i class="ph-fill ph-gear" style="color: #a855f7; font-size: 1.2rem;"></i> Preferences
                             </a>
                             
+                            @if(in_array('admin', $user->roles ?? []))
+                                <a href="{{ route('admin.index') }}" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1rem; color: #f87171; text-decoration: none; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.background='transparent'">
+                                    <i class="ph-fill ph-shield-check" style="font-size: 1.2rem;"></i> Admin Panel
+                                </a>
+                            @endif
+                            
                             <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0.5rem 0;"></div>
                             
                             <form action="{{ route('logout') }}" method="POST" style="margin: 0;">
@@ -170,6 +176,12 @@
                     <a href="{{ route('preferences.index') }}" class="nav-link">
                         <i class="ph-fill ph-gear" style="color: #a855f7; font-size: 1.2rem;"></i> Preferences
                     </a>
+                    
+                    @if(in_array('admin', $user->roles ?? []))
+                        <a href="{{ route('admin.index') }}" class="nav-link" style="color: #f87171;">
+                            <i class="ph-fill ph-shield-check" style="font-size: 1.2rem;"></i> Admin Panel
+                        </a>
+                    @endif
                     
                     <form action="{{ route('logout') }}" method="POST" style="margin: 0; width: 100%;">
                         @csrf
