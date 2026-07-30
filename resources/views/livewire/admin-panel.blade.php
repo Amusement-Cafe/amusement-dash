@@ -62,15 +62,17 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
     public function saveBalances()
     {
         if (empty($this->targetUserId)) return;
-        $targetUser = User::where('userID', $this->targetUserId)->first();
-        if (!$targetUser) return;
-        
-        $targetUser->tomatoes = $this->editTomatoes;
-        $targetUser->lemons = $this->editLemons;
-        $targetUser->vials = $this->editVials;
-        $targetUser->save();
 
-        $this->successMessage = "Balances updated successfully!";
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => env('AMUSE_API_KEY')
+        ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/admin/balances?user=' . auth()->user()->userID, [
+            'targetUserID' => $this->targetUserId,
+            'tomatoes' => $this->editTomatoes,
+            'lemons' => $this->editLemons,
+            'vials' => $this->editVials,
+        ]);
+
+        $this->successMessage = $response->successful() ? "Balances updated successfully!" : "Failed: " . $response->body();
     }
 
     public function giveCard()
@@ -83,63 +85,45 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
             return;
         }
 
-        // Check if user already has it
-        $userCard = UserCard::where('userID', $this->targetUserId)->where('cardID', (int)$this->giveCardId)->first();
-        if ($userCard) {
-            $userCard->amount = ($userCard->amount ?? 1) + 1;
-            $userCard->save();
-        } else {
-            $newCard = new UserCard();
-            $newCard->userID = $this->targetUserId;
-            $newCard->cardID = (int)$this->giveCardId;
-            $newCard->amount = 1;
-            $newCard->rating = 0;
-            $newCard->fav = false;
-            $newCard->locked = false;
-            $newCard->acquired = new \MongoDB\BSON\UTCDateTime();
-            $newCard->save();
-        }
-        
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => env('AMUSE_API_KEY')
+        ])->timeout(5)->put(env('AMUSE_API_ROOT') . '/user/admin/card?user=' . auth()->user()->userID, [
+            'targetUserID' => $this->targetUserId,
+            'cardID' => (int) $this->giveCardId,
+        ]);
+
         $this->giveCardId = '';
-        $this->successMessage = "Card {$card->cardName} given to user!";
+        $this->successMessage = $response->successful() ? "Card {$card->cardName} given to user!" : "Failed: " . $response->body();
     }
 
     public function giveItem()
     {
         if (empty($this->targetUserId) || empty($this->giveItemType) || empty($this->giveItemId)) return;
 
-        $item = new UserInventory();
-        $item->userID = $this->targetUserId;
-        $item->type = $this->giveItemType;
-        $item->itemID = $this->giveItemId;
-        $item->acquired = new \MongoDB\BSON\UTCDateTime();
-        $item->save();
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => env('AMUSE_API_KEY')
+        ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/admin/item?user=' . auth()->user()->userID, [
+            'targetUserID' => $this->targetUserId,
+            'type' => $this->giveItemType,
+            'itemID' => $this->giveItemId,
+        ]);
 
         $this->giveItemType = '';
         $this->giveItemId = '';
-        $this->successMessage = "Item given to user!";
+        $this->successMessage = $response->successful() ? "Item given to user!" : "Failed: " . $response->body();
     }
 
     public function resetDaily()
     {
         if (empty($this->targetUserId)) return;
-        $targetUser = User::where('userID', $this->targetUserId)->first();
-        if (!$targetUser) return;
-        
-        $streaks = $targetUser->streaks ?? [];
-        if (!isset($streaks['daily'])) {
-            $streaks['daily'] = [];
-        }
-        
-        // Setting it to yesterday so they can claim again
-        $yesterday = Carbon\Carbon::now()->subDays(1);
-        $streaks['daily']['lastReset'] = new \MongoDB\BSON\UTCDateTime($yesterday->getPreciseTimestamp(3));
-        
-        $targetUser->streaks = $streaks;
-        $targetUser->lastDaily = new \MongoDB\BSON\UTCDateTime($yesterday->getPreciseTimestamp(3));
-        $targetUser->save();
 
-        $this->successMessage = "Daily streak reset! User can claim daily again.";
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => env('AMUSE_API_KEY')
+        ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/admin/resetdaily?user=' . auth()->user()->userID, [
+            'targetUserID' => $this->targetUserId,
+        ]);
+
+        $this->successMessage = $response->successful() ? "Daily streak reset! User can claim daily again." : "Failed: " . $response->body();
     }
 
     public function with(): array

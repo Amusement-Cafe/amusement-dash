@@ -9,10 +9,21 @@ new class extends Component {
     {
         if (auth()->check()) {
             $user = auth()->user();
+
+            \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => env('AMUSE_API_KEY')
+            ])->timeout(5)->patch(env('AMUSE_API_ROOT') . '/user/preferences?user=' . $user->userID, [
+                'preferences' => [
+                    'profile' => [
+                        'card' => (string)$cardId
+                    ]
+                ]
+            ]);
+
             $prefs = $user->preferences ?? [];
             $prefs['profile']['card'] = (string)$cardId;
             $user->preferences = $prefs;
-            $user->save();
+            // $user->save(); // Deprecated DB write in favor of API route
             
             $this->dispatch('notify', message: 'Profile favorite card updated!');
         }
@@ -23,17 +34,17 @@ new class extends Component {
     {
         if (auth()->check()) {
             $user = auth()->user();
-            $userCard = \App\Models\UserCard::where('userID', $user->userID)
-                ->where('cardID', (int)$cardId)
-                ->first();
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => env('AMUSE_API_KEY')
+            ])->timeout(5)->patch(env('AMUSE_API_ROOT') . '/user/cards/fav?user=' . $user->userID, [
+                'cardID' => (int)$cardId
+            ]);
             
-            if ($userCard) {
-                $userCard->fav = !$userCard->fav;
-                $userCard->save();
-                
-                $message = $userCard->fav ? 'Card added to favorites!' : 'Card removed from favorites.';
+            if ($response->successful()) {
+                $data = $response->json();
+                $message = $data['fav'] ? 'Card added to favorites!' : 'Card removed from favorites.';
                 $this->dispatch('notify', message: $message);
-                $this->dispatch('card-updated', cardId: $cardId, type: 'fav', value: $userCard->fav);
+                $this->dispatch('card-updated', cardId: $cardId, type: 'fav', value: $data['fav']);
             }
         }
     }
@@ -48,16 +59,19 @@ new class extends Component {
                 ->first();
             
             if ($wishlist) {
-                $wishlist->delete();
+                \Illuminate\Support\Facades\Http::withHeaders([
+                    'Authorization' => env('AMUSE_API_KEY')
+                ])->timeout(5)->delete(env('AMUSE_API_ROOT') . '/user/wishlist?user=' . $user->userID, [
+                    'cardID' => (string)$cardId
+                ]);
                 $this->dispatch('notify', message: 'Card removed from wishlist.');
                 $this->dispatch('card-updated', cardId: $cardId, type: 'wishlist', value: false);
             } else {
-                $newWishlist = new \App\Models\UserWishlist();
-                $newWishlist->userID = $user->userID;
-                $newWishlist->cardID = (string)$cardId;
-                $newWishlist->added = new \MongoDB\BSON\UTCDateTime();
-                $newWishlist->save();
-                
+                \Illuminate\Support\Facades\Http::withHeaders([
+                    'Authorization' => env('AMUSE_API_KEY')
+                ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/wishlist?user=' . $user->userID, [
+                    'cardID' => (string)$cardId
+                ]);
                 $this->dispatch('notify', message: 'Card added to wishlist!');
                 $this->dispatch('card-updated', cardId: $cardId, type: 'wishlist', value: true);
             }

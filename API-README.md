@@ -448,3 +448,33 @@ Route Handler
 - Every other endpoint requires authorization.
 - All `/user/*` endpoints require a valid `user` query parameter.
 - Card images are hosted externally and served through HTTP redirects.
+---
+
+# Additional Endpoints (Implemented)
+
+The following endpoints were added to fully decouple the dashboard from direct database writes:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| PATCH | `/user/cards/fav` | Toggle card favorite flag |
+| PATCH | `/user/cards/edit` | Edit card metadata & tags (requires editor role) |
+| POST | `/user/wishlist` | Add card to wishlist |
+| DELETE | `/user/wishlist` | Remove card from wishlist |
+| POST | `/user/auction/bid` | Place auction bid (atomic refund + deduct + update) |
+| PATCH | `/user/hero` | Set user's active hero |
+| POST | `/user/plots/collect` | Collect lemons from guild plots |
+| POST | `/user/store/purchase` | Purchase store item (atomic deduct + inventory + stats) |
+| POST | `/user/claim` | Claim cards (atomic pricing + drawing + stats + claim record) |
+| POST | `/user/admin/balances` | Admin: set user balances |
+| PUT | `/user/admin/card` | Admin: give card to user |
+| POST | `/user/admin/item` | Admin: give item to user |
+| POST | `/user/admin/resetdaily` | Admin: reset user's daily |
+
+See the bot's `api/README.md` for full endpoint documentation.
+
+# Remaining Dashboard Writes
+
+The following writes remain in the dashboard and do **not** go through the API:
+
+- **`AuthController.php`** — Discord OAuth `updateOrCreate` on users collection for login. This is a legitimate auth concern.
+- **`leaderboards-page.blade.php`** — Dashboard-local leaderboard cache (`leaderboards` collection). Not a bot model.

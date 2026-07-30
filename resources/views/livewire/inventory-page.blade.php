@@ -34,7 +34,12 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
             ->firstWhere('id', $this->selectedItemId);
             
         if($item) {
-            $item->delete();
+            \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => env('AMUSE_API_KEY')
+            ])->timeout(5)->delete(env('AMUSE_API_ROOT') . '/user/inventory?user=' . $user->userID, [
+                'id' => $item->id
+            ]);
+            // $item->delete(); // Deprecated DB write in favor of API route
         }
     }
 
@@ -54,22 +59,14 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
     public function addCardsToInventory($cardIds)
     {
         $user = auth()->user();
-        foreach ($cardIds as $cardId) {
-            $userCard = \App\Models\UserCard::where('userID', $user->userID)
-                ->where('cardID', $cardId)
-                ->first();
-
-            if ($userCard) {
-                $userCard->increment('amount');
-            } else {
-                \App\Models\UserCard::create([
-                    'userID' => $user->userID,
-                    'cardID' => $cardId,
-                    'amount' => 1,
-                    'acquired' => now(),
-                ]);
-            }
-        }
+        
+        \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => env('AMUSE_API_KEY')
+        ])->timeout(5)->put(env('AMUSE_API_ROOT') . '/user/cards?user=' . $user->userID, [
+            'cards' => $cardIds
+        ]);
+        
+        // Deprecated raw DB writes for usercards in favor of API route
     }
 
     public function confirmUseItem($itemId = null)
@@ -145,7 +142,13 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
                         $cards = $query->get();
                         $this->revealedCards = $cards->shuffle()->take($this->ticketAmount)->pluck('cardID')->toArray();
                         $this->showCardReveal = true;
-                        $item->delete();
+                        
+                        \Illuminate\Support\Facades\Http::withHeaders([
+                            'Authorization' => env('AMUSE_API_KEY')
+                        ])->timeout(5)->delete(env('AMUSE_API_ROOT') . '/user/inventory?user=' . $user->userID, [
+                            'id' => $item->id
+                        ]);
+                        // $item->delete(); // Deprecated DB write in favor of API route
                     } else {
                         $this->dispatch('log-to-console', ['message' => 'Ticket is not random.']);
                         $this->showCardSearch = true;

@@ -47,9 +47,11 @@ new #[Layout('layouts.app')] #[Title('Heroes')] class extends Component {
         
         $user = Auth::user();
         if ($user) {
-            $user->hero = $id;
-            $user->heroChanged = now();
-            $user->save();
+            \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => env('AMUSE_API_KEY')
+            ])->timeout(5)->patch(env('AMUSE_API_ROOT') . '/user/hero?user=' . $user->userID, [
+                'heroID' => $id
+            ]);
             
             $this->dispatch('notify', message: 'Hero assigned successfully!');
         }

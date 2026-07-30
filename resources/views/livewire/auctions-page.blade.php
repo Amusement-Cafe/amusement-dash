@@ -125,38 +125,17 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
     public function placeBid()
     {
         if (!auth()->check() || !$this->selectedAuctionId) return;
-        
-        $user = User::where('userID', auth()->user()->userID)->first();
-        $auction = Auction::where('auctionID', $this->selectedAuctionId)->first();
-        
-        if (!$auction || $auction->ended || $auction->cancelled) return;
-        if ($this->bidAmount <= $auction->highBid) return;
-        if ($user->tomatoes < $this->bidAmount) return;
 
-        // Refund previous bidder
-        if ($auction->lastBidderID) {
-            User::where('userID', $auction->lastBidderID)->increment('tomatoes', $auction->highBid);
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => env('AMUSE_API_KEY')
+        ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/auction/bid?user=' . auth()->user()->userID, [
+            'auctionID' => $this->selectedAuctionId,
+            'amount' => $this->bidAmount,
+        ]);
+
+        if (!$response->successful()) {
+            $this->dispatch('notify', message: $response->body() ?: 'Bid failed.');
         }
-
-        // Deduct tomatoes
-        $user->decrement('tomatoes', $this->bidAmount);
-
-        // Update auction
-        $newPrice = $auction->highBid > 0 ? $auction->highBid + 1 : $auction->price;
-        if ($newPrice > $this->bidAmount) $newPrice = $this->bidAmount;
-
-        $auction->price = $newPrice;
-        $auction->highBid = $this->bidAmount;
-        $auction->lastBidderID = $user->userID;
-        
-        $bids = $auction->bids ?? [];
-        $bids[] = [
-            'user' => $user->userID,
-            'bid' => $this->bidAmount,
-            'time' => new \MongoDB\BSON\UTCDateTime()
-        ];
-        $auction->bids = $bids;
-        $auction->save();
 
         $this->closeModal();
     }

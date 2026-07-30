@@ -38,46 +38,23 @@ new class extends Component {
             return;
         }
 
-        $user = \App\Models\User::where('userID', auth()->user()->userID)->first();
-        if (!$user) return;
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => env('AMUSE_API_KEY')
+        ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/store/purchase?user=' . auth()->user()->userID, [
+            'itemID' => $itemID
+        ]);
 
-        if (!isset($this->items[$itemID])) {
-            $this->dispatch('notify', message: "Item not found.");
-            return;
+        if ($response->successful()) {
+            $name = '';
+            if (isset($this->items[$itemID]) && !empty($this->items[$itemID]['displayName'])) {
+                $name = str_replace('`', '', $this->items[$itemID]['displayName']);
+            } else {
+                $name = ucfirst($itemID);
+            }
+            $this->dispatch('notify', message: "Successfully purchased $name!");
+        } else {
+            $this->dispatch('notify', message: $response->body() ?: 'Purchase failed.');
         }
-
-        $item = $this->items[$itemID];
-        $cost = isset($item['cost']) && $item['cost'] > 1 ? $item['cost'] : 1000;
-
-        if ($user->tomatoes < $cost) {
-            $this->dispatch('notify', message: "Not enough tomatoes. You need " . number_format($cost) . " 🍅.");
-            return;
-        }
-
-        // Deduct cost
-        $user->decrement('tomatoes', $cost);
-
-        // Add to inventory
-        $inv = new \App\Models\UserInventory();
-        $inv->id = (string) \Illuminate\Support\Str::uuid();
-        $inv->userID = $user->userID;
-        $inv->itemID = $itemID;
-        $inv->acquired = new \MongoDB\BSON\UTCDateTime();
-        $inv->type = $item['type'] ?? $this->activeCategory;
-        $inv->save();
-
-        // Increment user stats using raw DB query since UserStat model isn't present
-        $statField = 'store';
-        $typeField = 'store' . ucfirst($inv->type);
-        \Illuminate\Support\Facades\DB::connection('mongodb')->table('userstats')
-            ->where('userID', $user->userID)
-            ->increment($statField, 1);
-        \Illuminate\Support\Facades\DB::connection('mongodb')->table('userstats')
-            ->where('userID', $user->userID)
-            ->increment($typeField, 1);
-
-        $name = !empty($item['displayName']) ? str_replace('`', '', $item['displayName']) : ucfirst($itemID);
-        $this->dispatch('notify', message: "Successfully purchased $name!");
     }
     
     public bool $showPreview = false;

@@ -162,55 +162,38 @@ new #[Layout('layouts.app')] #[Title('Card Editor')] class extends Component
     {
         if (!$this->isDirty) return;
 
-        // Save card changes
-        $this->card->displayName = $this->editedData['displayName'];
-        
         $metaToSave = [];
         foreach ($this->editedData['meta'] as $k => $v) {
             if ($v !== '' && $v !== null) {
-                // Parse booruScore and booruID to int if appropriate
-                if ($k === 'booruID' || $k === 'booruScore' || $k === 'booruRating') {
-                    // Keep rating as string, but ID and score as int
-                    if ($k === 'booruID' || $k === 'booruScore') {
-                        $metaToSave[$k] = (int) $v;
-                    } else {
-                        $metaToSave[$k] = $v;
-                    }
+                if ($k === 'booruID' || $k === 'booruScore') {
+                    $metaToSave[$k] = (int) $v;
                 } else {
                     $metaToSave[$k] = $v;
                 }
             }
         }
-        $this->card->meta = empty($metaToSave) ? null : $metaToSave;
-        $this->card->save();
 
-        // Save tag changes
-        $tagsToAdd = array_diff($this->editedTags, $this->originalTags);
-        $tagsToRemove = array_diff($this->originalTags, $this->editedTags);
+        $tagsToAdd = array_values(array_diff($this->editedTags, $this->originalTags));
+        $tagsToRemove = array_values(array_diff($this->originalTags, $this->editedTags));
 
-        if (!empty($tagsToRemove)) {
-            Tag::where('cardID', (int) $this->cardId)
-                ->whereIn('tagName', $tagsToRemove)
-                ->delete();
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => env('AMUSE_API_KEY')
+        ])->timeout(10)->patch(env('AMUSE_API_ROOT') . '/user/cards/edit?user=' . auth()->user()->userID, [
+            'cardID' => (int) $this->cardId,
+            'displayName' => $this->editedData['displayName'],
+            'meta' => empty($metaToSave) ? null : $metaToSave,
+            'tagsToAdd' => $tagsToAdd,
+            'tagsToRemove' => $tagsToRemove,
+        ]);
+
+        if ($response->successful()) {
+            $this->originalData = $this->editedData;
+            $this->originalTags = $this->editedTags;
+            $this->isDirty = false;
+            session()->flash('message', 'Card updated successfully.');
+        } else {
+            session()->flash('message', 'Failed to update card: ' . $response->body());
         }
-
-        foreach ($tagsToAdd as $t) {
-            Tag::create([
-                'cardID' => (int) $this->cardId,
-                'tagName' => $t,
-                'status' => 'clear',
-                'userID' => auth()->user()->userID,
-                'upvotes' => [],
-                'downvotes' => []
-            ]);
-        }
-
-        // Reset state
-        $this->originalData = $this->editedData;
-        $this->originalTags = $this->editedTags;
-        $this->isDirty = false;
-        
-        session()->flash('message', 'Card updated successfully.');
     }
 };
 ?>

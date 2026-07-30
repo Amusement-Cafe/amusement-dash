@@ -7,28 +7,22 @@ use Illuminate\Support\Facades\Auth;
 
 new #[Layout('layouts.app')] class extends Component {
     public function collectAll($guildID) {
-        $plots = Plot::where('userID', Auth::user()->userID)->where('guildID', $guildID)->get();
-        $totalCollected = 0;
-        
-        foreach($plots as $plot) {
-            if (isset($plot->building) && ($plot->building['storedLemons'] ?? 0) > 0) {
-                $building = $plot->building;
-                $lemonsCollected = $building['storedLemons'];
-                $totalCollected += $lemonsCollected;
-                
-                $building['storedLemons'] = 0;
-                $plot->building = $building;
-                $plot->save();
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => env('AMUSE_API_KEY')
+        ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/plots/collect?user=' . Auth::user()->userID, [
+            'guildID' => $guildID
+        ]);
+
+        if ($response->successful()) {
+            $data = $response->json();
+            $collected = $data['collected'] ?? 0;
+            if ($collected > 0) {
+                $this->dispatch('notify', message: 'Successfully collected ' . number_format($collected) . ' lemons!');
+            } else {
+                $this->dispatch('notify', message: 'No lemons to collect here.');
             }
-        }
-        
-        if ($totalCollected > 0) {
-            $user = Auth::user();
-            $user->lemons += $totalCollected;
-            $user->save();
-            $this->dispatch('notify', message: 'Successfully collected ' . number_format($totalCollected) . ' lemons!');
         } else {
-            $this->dispatch('notify', message: 'No lemons to collect here.');
+            $this->dispatch('notify', message: 'Failed to collect lemons.');
         }
     }
 

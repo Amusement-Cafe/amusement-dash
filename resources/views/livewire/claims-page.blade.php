@@ -11,7 +11,7 @@ use App\Models\Card;
 use App\Models\Promo;
 use App\Models\UserStat;
 use App\Models\BotCollection;
-use App\Models\UserCard;
+
 use Illuminate\Support\Facades\Cache;
 
 use Livewire\Attributes\Title;
@@ -205,105 +205,24 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
     {
         if (!auth()->check()) return;
         $user = auth()->user();
-        
-        $price = $this->price;
-        if ($user->tomatoes < $price) {
-            session()->flash('error', 'Not enough tomatoes!');
-            return;
-        }
-        
-        $userStats = UserStat::where('userID', $user->userID)
-            ->where('daily', $user->lastDaily)
-            ->first();
-            
-        $isPromo = $this->selectedBannerId !== 'standard';
-        
-        $claimCount = 0;
-        if ($userStats) {
-            $claimCount = $isPromo ? ($userStats->promoClaims ?? $userStats->promoclaims ?? 0) : ($userStats->claims ?? 0);
-        }
-        $tempClaims = $claimCount + $this->claimAmount;
-        
-        // deduct price
-        $user->tomatoes -= $price;
-        $user->save();
-        
-        // update stats
-        if ($userStats) {
-            if ($isPromo) {
-                $userStats->promoClaims = $tempClaims;
-                $userStats->promoclaims = $tempClaims;
-            } else {
-                $userStats->claims = $tempClaims;
-            }
-            $userStats->save();
+
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => env('AMUSE_API_KEY')
+        ])->timeout(10)->post(env('AMUSE_API_ROOT') . '/user/claim?user=' . $user->userID, [
+            'bannerID' => $this->selectedBannerId,
+            'amount' => $this->claimAmount,
+        ]);
+
+        if ($response->successful()) {
+            $data = $response->json();
+            $this->revealedCards = $data['cards'];
+            $this->showRevealModal = true;
+            // Refresh user data for updated balance display
+            auth()->user()->refresh();
         } else {
-            $userStats = new UserStat();
-            $userStats->userID = $user->userID;
-            $userStats->daily = $user->lastDaily;
-            if ($isPromo) {
-                $userStats->promoClaims = $tempClaims;
-                $userStats->promoclaims = $tempClaims;
-            } else {
-                $userStats->claims = $tempClaims;
-            }
-            $userStats->save();
+            $body = $response->body();
+            session()->flash('error', $body ?: 'Claim failed. Please try again.');
         }
-        
-        // draw cards (mock logic for now)
-        $cardsPool = [];
-        if ($isPromo) {
-            $promo = Promo::where('promoID', $this->selectedBannerId)->first();
-            if ($promo && $promo->isBoost && !empty($promo->cardIDs)) {
-                $cardsPool = Card::whereIn('cardID', $promo->cardIDs)->pluck('cardID')->toArray();
-            } else {
-                $cardsPool = Card::where('collectionID', $this->selectedBannerId)->pluck('cardID')->toArray();
-            }
-        } else {
-            $promoColIds = BotCollection::where('promo', true)->pluck('collectionID')->toArray();
-            $cardsPool = Card::whereNotIn('collectionID', $promoColIds)->whereIn('rarity', [1, 2, 3, 4, 5])->pluck('cardID')->toArray();
-        }
-        
-        $drawn = [];
-        for ($i = 0; $i < $this->claimAmount; $i++) {
-            if (!empty($cardsPool)) {
-                $drawn[] = $cardsPool[array_rand($cardsPool)];
-            }
-        }
-        
-        if (empty($drawn)) {
-            session()->flash('error', 'No cards available in this pool!');
-            return;
-        }
-        
-        // save as claim
-        $claim = new Claim();
-        $claim->claimID = \Illuminate\Support\Str::random(10);
-        $claim->userID = $user->userID;
-        $claim->cardIDs = $drawn;
-        $claim->promo = $isPromo;
-        $claim->timeClaimed = new \MongoDB\BSON\UTCDateTime(now());
-        $claim->cost = $price;
-        $claim->save();
-        
-        // save user cards
-        foreach ($drawn as $cid) {
-            $uc = UserCard::where('userID', $user->userID)->where('cardID', $cid)->first();
-            if ($uc) {
-                $uc->amount = ($uc->amount ?? 1) + 1;
-                $uc->save();
-            } else {
-                $nuc = new UserCard();
-                $nuc->userID = $user->userID;
-                $nuc->cardID = $cid;
-                $nuc->amount = 1;
-                $nuc->acquired = new \MongoDB\BSON\UTCDateTime(now());
-                $nuc->save();
-            }
-        }
-        
-        $this->revealedCards = $drawn;
-        $this->showRevealModal = true;
     }
 
     public function with(): array
