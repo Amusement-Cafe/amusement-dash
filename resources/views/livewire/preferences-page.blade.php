@@ -18,7 +18,21 @@ new #[Layout('layouts.app')] #[Title('Preferences')] class extends Component
     public function mount()
     {
         $user = auth()->user();
-        $this->prefs = $user->preferences ?? [];
+        
+        $apiRoot = env('AMUSE_API_ROOT');
+        $apiKey = env('AMUSE_API_KEY');
+        
+        // Fetch preferences from API instead of database
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => $apiKey
+        ])->get("{$apiRoot}/user/preferences?user={$user->userID}");
+        
+        if ($response->successful()) {
+            $this->prefs = $response->json();
+        } else {
+            $this->prefs = $user->preferences ?? [];
+        }
+
         $this->achievements = $user->achievements ?? [];
         
         $compIds = collect($user->completedCols ?? [])->pluck('id')->toArray();
@@ -37,6 +51,10 @@ new #[Layout('layouts.app')] #[Title('Preferences')] class extends Component
         $this->prefs['profile'] ??= [];
         
         $decimalColor = $this->prefs['profile']['color'] ?? 16756480;
+        // Handle empty or null colors to prevent fatal error
+        if (empty($decimalColor)) {
+            $decimalColor = 16756480;
+        }
         $this->hexColor = '#' . str_pad(dechex((int)$decimalColor), 6, '0', STR_PAD_LEFT);
     }
 
@@ -47,11 +65,23 @@ new #[Layout('layouts.app')] #[Title('Preferences')] class extends Component
         // Convert hex back to decimal string for the bot
         $this->prefs['profile']['color'] = (string)hexdec(ltrim($this->hexColor, '#'));
         
-        $user->preferences = collect($this->prefs)->toArray();
-        $user->save();
+        $apiRoot = env('AMUSE_API_ROOT');
+        $apiKey = env('AMUSE_API_KEY');
+        
+        // PATCH to the API instead of writing to database
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => $apiKey,
+            'Content-Type' => 'application/json'
+        ])->patch("{$apiRoot}/user/preferences?user={$user->userID}", [
+            'preferences' => $this->prefs
+        ]);
 
-        session()->flash('success', 'Preferences saved successfully.');
-        $this->dispatch('save-success');
+        if ($response->successful()) {
+            session()->flash('success', 'Preferences saved successfully.');
+            $this->dispatch('save-success');
+        } else {
+            session()->flash('error', 'Failed to save preferences: ' . $response->status());
+        }
     }
 };
 ?>
@@ -64,6 +94,12 @@ new #[Layout('layouts.app')] #[Title('Preferences')] class extends Component
     @if (session()->has('success'))
         <div style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; border: 1px solid rgba(16, 185, 129, 0.3);">
             {{ session('success') }}
+        </div>
+    @endif
+
+    @if (session()->has('error'))
+        <div style="background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; border: 1px solid rgba(239, 68, 68, 0.3);">
+            {{ session('error') }}
         </div>
     @endif
 
