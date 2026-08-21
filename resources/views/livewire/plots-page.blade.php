@@ -7,6 +7,11 @@ use Illuminate\Support\Facades\Auth;
 
 new #[Layout('layouts.app')] class extends Component {
     public function collectAll($guildID) {
+        if (!Auth::user()->canWrite()) {
+            $this->dispatch('notify', message: 'You need AmuPlus to perform this action.', type: 'error');
+            return;
+        }
+
         $response = \Illuminate\Support\Facades\Http::withHeaders([
             'Authorization' => env('AMUSE_API_KEY')
         ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/plots/collect?user=' . Auth::user()->userID, [
@@ -115,6 +120,15 @@ new #[Layout('layouts.app')] class extends Component {
         </div>
     </div>
 
+    @if(!auth()->user()?->canWrite())
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; text-align: center; margin-bottom: 2rem; display: flex; flex-direction: column; align-items: center;">
+            <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 1.1rem;">Collecting from plots is an exclusive feature for AmuPlus supporters.</p>
+            <a href="https://ko-fi.com/amusement" target="_blank" class="btn-amuplus" style="padding: 0.8rem 2rem; border-radius: 50px; display: inline-flex;">
+                <i class="ph-bold ph-coffee"></i> Get AmuPlus to Collect
+            </a>
+        </div>
+    @endif
+
     @if(empty($guildGroups))
         <div class="glass-panel" style="padding: 4rem; text-align: center; border: 2px dashed var(--glass-border);">
             <i class="ph-light ph-plant" style="font-size: 5rem; margin-bottom: 1rem; color: var(--text-secondary);"></i>
@@ -154,9 +168,11 @@ new #[Layout('layouts.app')] class extends Component {
                             </div>
                             
                             @if($group['totalLemons'] > 0)
-                                <button wire:click="collectAll('{{ $guildID }}')" class="btn btn-primary" style="padding: 0.6rem 1.2rem; font-weight: bold; display: flex; align-items: center; gap: 0.5rem; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(234, 179, 8, 0.3);">
-                                    <i class="ph-bold ph-hand-coins"></i> Collect All
-                                </button>
+                                @if(auth()->user()?->canWrite())
+                                    <button wire:click="collectAll('{{ $guildID }}')" class="btn btn-primary" style="padding: 0.6rem 1.2rem; font-weight: bold; display: flex; align-items: center; gap: 0.5rem; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(234, 179, 8, 0.3);">
+                                        <i class="ph-bold ph-hand-coins"></i> Collect All
+                                    </button>
+                                @endif
                             @else
                                 <button disabled class="btn" style="padding: 0.6rem 1.2rem; font-weight: bold; display: flex; align-items: center; gap: 0.5rem; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text-secondary); cursor: not-allowed;">
                                     <i class="ph-bold ph-check"></i> Collected

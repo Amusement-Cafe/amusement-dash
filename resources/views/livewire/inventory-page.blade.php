@@ -71,6 +71,11 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
 
     public function confirmUseItem($itemId = null)
     {
+        if (!auth()->user()->canWrite()) {
+            $this->dispatch('notify', message: 'You need AmuPlus to perform this action.', type: 'error');
+            return;
+        }
+
         if ($itemId) {
             $this->selectedItemId = $itemId;
         }
@@ -219,6 +224,15 @@ x-effect="document.body.style.overflow = (showConfirmModal || showSearch || show
         </a>
     </div>
 
+    @if(!auth()->user()?->canWrite())
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; text-align: center; margin-bottom: 2rem; display: flex; flex-direction: column; align-items: center;">
+            <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 1.1rem;">Using items is an exclusive feature for AmuPlus supporters.</p>
+            <a href="https://ko-fi.com/amusement" target="_blank" class="btn-amuplus" style="padding: 0.8rem 2rem; border-radius: 50px; display: inline-flex;">
+                <i class="ph-bold ph-coffee"></i> Get AmuPlus to Use Items
+            </a>
+        </div>
+    @endif
+
     @if(count($inventoryItems) > 0)
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
             @foreach($inventoryItems as $item)
@@ -321,9 +335,11 @@ x-effect="document.body.style.overflow = (showConfirmModal || showSearch || show
                     </div>
                     
                     <div class="item-action-overlay">
-                        <button @click="selectedItemId = '{{ $item->id }}'; showConfirmModal = true;" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.8rem 2rem; box-shadow: 0 0 20px {{ $color }}60; border: 1px solid {{ $color }};">
-                            <i class="ph-bold ph-magic-wand"></i> Use Item
-                        </button>
+                        @if(auth()->user()?->canWrite())
+                            <button @click="selectedItemId = '{{ $item->id }}'; showConfirmModal = true;" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.8rem 2rem; box-shadow: 0 0 20px {{ $color }}60; border: 1px solid {{ $color }};">
+                                <i class="ph-bold ph-magic-wand"></i> Use Item
+                            </button>
+                        @endif
                     </div>
                 </div>
             @endforeach

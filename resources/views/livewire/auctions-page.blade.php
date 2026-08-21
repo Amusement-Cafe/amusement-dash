@@ -125,6 +125,10 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
     public function placeBid()
     {
         if (!auth()->check() || !$this->selectedAuctionId) return;
+        if (!auth()->user()->canWrite()) {
+            $this->dispatch('notify', message: 'You need AmuPlus to perform this action.', type: 'error');
+            return;
+        }
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
             'Authorization' => env('AMUSE_API_KEY')
@@ -336,6 +340,15 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
     <div style="margin-bottom: 2rem;">
         <h1 style="font-size: 2.5rem; margin: 0;">Live Auctions ({{ number_format($auctions->total()) }} running)</h1>
     </div>
+
+    @if(!auth()->user()?->canWrite())
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; text-align: center; margin-bottom: 2rem; display: flex; flex-direction: column; align-items: center;">
+            <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 1.1rem;">Bidding on auctions is an exclusive feature for AmuPlus supporters.</p>
+            <a href="https://ko-fi.com/amusement" target="_blank" class="btn-amuplus" style="padding: 0.8rem 2rem; border-radius: 50px; display: inline-flex;">
+                <i class="ph-bold ph-coffee"></i> Get AmuPlus to Bid
+            </a>
+        </div>
+    @endif
 
     <!-- Filters Component -->
     <x-card-filters :collections="$collections" :tags="$tags" :sortDesc="$sortDesc" :hidePromos="$hidePromos" :activeFiltersCount="$activeFiltersCount" :sortOptions="$sortOptions" :allTags="$allTags" />
@@ -575,9 +588,11 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
                                     <button wire:click="incrementBid" style="background: rgba(255,255,255,0.05); border: none; color: white; padding: 0.8rem 1rem; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class="ph-bold ph-plus"></i></button>
                                 </div>
                                 
-                                <button wire:click="placeBid" class="btn btn-primary" style="flex: 1; padding: 0.8rem; font-size: 1.1rem; background: #10b981; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);">
-                                    Place Bid
-                                </button>
+                                @if(auth()->user()?->canWrite())
+                                    <button wire:click="placeBid" class="btn btn-primary" style="flex: 1; padding: 0.8rem; font-size: 1.1rem; background: #10b981; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);">
+                                        Place Bid
+                                    </button>
+                                @endif
                             </div>
                             <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.8rem;">
                                 Your balance: <span style="color: white; font-weight: bold;">{{ number_format(auth()->user()->tomatoes) }} 🍅</span>

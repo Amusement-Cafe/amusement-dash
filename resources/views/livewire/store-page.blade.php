@@ -37,6 +37,10 @@ new class extends Component {
             $this->dispatch('notify', message: "You must be signed in to purchase items.");
             return;
         }
+        if (!auth()->user()->canWrite()) {
+            $this->dispatch('notify', message: 'You need AmuPlus to perform this action.', type: 'error');
+            return;
+        }
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
             'Authorization' => env('AMUSE_API_KEY')
@@ -183,6 +187,15 @@ new class extends Component {
         <p style="color: var(--text-secondary); font-size: 1.2rem; max-width: 600px; margin: 0 auto;">Purchase exclusive tickets, recipes, blueprints, and bonuses for your collection.</p>
     </div>
 
+    @if(!auth()->user()?->canWrite())
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; text-align: center; margin-bottom: 3rem; display: flex; flex-direction: column; align-items: center;">
+            <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 1.1rem;">Store purchases are an exclusive feature for AmuPlus supporters.</p>
+            <a href="https://ko-fi.com/amusement" target="_blank" class="btn-amuplus" style="padding: 0.8rem 2rem; border-radius: 50px; display: inline-flex;">
+                <i class="ph-bold ph-coffee"></i> Get AmuPlus to Unlock Store
+            </a>
+        </div>
+    @endif
+
     <!-- Category Tabs -->
     <div class="category-tabs" style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 3rem;">
         @foreach($categories as $key => $cat)
@@ -282,9 +295,11 @@ new class extends Component {
                             <span style="font-weight: bold; color: white;">{{ number_format(isset($item['cost']) && $item['cost'] > 1 ? $item['cost'] : 1000) }}</span>
                         </div>
                         
-                        <button wire:click="purchase('{{ $itemID }}')" class="buy-btn" style="background: {{ $color }};">
-                            Buy
-                        </button>
+                        @if(auth()->user()?->canWrite())
+                            <button wire:click="purchase('{{ $itemID }}')" class="buy-btn" style="background: {{ $color }};">
+                                Buy
+                            </button>
+                        @endif
                     </div>
                 </div>
             @endif

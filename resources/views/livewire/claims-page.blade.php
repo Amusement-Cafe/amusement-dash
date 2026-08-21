@@ -213,6 +213,10 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
     public function doClaim()
     {
         if (!auth()->check()) return;
+        if (!auth()->user()->canWrite()) {
+            $this->dispatch('notify', message: 'You need AmuPlus to perform this action.', type: 'error');
+            return;
+        }
         $user = auth()->user();
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
@@ -491,9 +495,15 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
                 </div>
                 
                 <div style="display: flex; flex-direction: column; align-items: center;">
-                    <button class="shiny-btn" wire:click="doClaim" wire:loading.attr="disabled" @if(!$affords) disabled @endif>
-                        <i class="ph-fill ph-sparkle"></i> CLAIM NOW <i class="ph-fill ph-sparkle"></i>
-                    </button>
+                    @if(auth()->user()?->canWrite())
+                        <button class="shiny-btn" wire:click="doClaim" wire:loading.attr="disabled" @if(!$affords) disabled @endif>
+                            <i class="ph-fill ph-sparkle"></i> CLAIM NOW <i class="ph-fill ph-sparkle"></i>
+                        </button>
+                    @else
+                        <a href="https://ko-fi.com/amusement" target="_blank" class="shiny-btn btn-amuplus">
+                            <i class="ph-bold ph-coffee"></i> Get AmuPlus to Claim
+                        </a>
+                    @endif
                     <div wire:loading.flex wire:target="doClaim" style="margin-top: 1rem; color: var(--accent-solid); font-weight: bold; align-items: center; gap: 0.5rem;">
                         <i class="ph-bold ph-spinner ph-spin"></i> Processing drop...
                     </div>

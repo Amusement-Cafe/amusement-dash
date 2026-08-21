@@ -22,6 +22,31 @@
         <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}">
         <link rel="icon" type="image/x-icon" href="https://amu.cards/favicon.ico">
         <script src="https://unpkg.com/@phosphor-icons/web"></script>
+        <style>
+            @keyframes amuplusScroll {
+                0% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+                100% { background-position: 0% 50%; }
+            }
+            .btn-amuplus {
+                background: linear-gradient(45deg, #06b6d4, #a855f7, #06b6d4, #a855f7);
+                background-size: 300% 300%;
+                animation: amuplusScroll 4s linear infinite;
+                color: white !important;
+                text-decoration: none !important;
+                border: none;
+                transition: transform 0.2s, box-shadow 0.2s;
+                font-weight: bold;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+            }
+            .btn-amuplus:hover {
+                box-shadow: 0 4px 15px rgba(168, 85, 247, 0.5);
+                transform: translateY(-2px);
+            }
+        </style>
     </head>
     <body class="antialiased">
         @if(isset($apiIsDown) && $apiIsDown)
@@ -252,12 +277,13 @@
         <livewire:global-actions />
         
         <!-- Global Notification Toast -->
-        <div x-data="{ show: false, message: '' }" 
-             @notify.window="message = $event.detail.message; show = true; setTimeout(() => show = false, 3000)"
+        <div x-data="{ show: false, message: '', type: 'success' }" 
+             @notify.window="message = $event.detail.message; type = $event.detail.type || 'success'; show = true; setTimeout(() => show = false, 3000)"
              x-show="show" 
              x-transition.opacity.duration.300ms
-             style="display: none; position: fixed; bottom: 2rem; right: 2rem; background: #10b981; color: white; padding: 1rem 2rem; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 9999; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);">
-            <i class="ph-bold ph-check-circle" style="margin-right: 0.5rem;"></i> <span x-text="message"></span>
+             style="display: none; position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 2rem; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 9999; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);"
+             :style="type === 'error' ? { backgroundColor: '#eab308', color: 'black' } : { backgroundColor: '#10b981', color: 'white' }">
+            <i class="ph-bold" :class="type === 'error' ? 'ph-warning-circle' : 'ph-check-circle'" style="margin-right: 0.5rem;"></i> <span x-text="message"></span>
         </div>
     </body>
 </html>

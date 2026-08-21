@@ -36,4 +36,13 @@ class User extends Authenticatable
             //
         ];
     }
+
+    public function canWrite(): bool
+    {
+        if (empty($this->roles)) {
+            return false;
+        }
+        $r = array_map('strtolower', $this->roles);
+        return count(array_intersect($r, ['amuplus', 'admin', 'metamod', 'tagmod', 'auditor'])) > 0;
+    }
 }

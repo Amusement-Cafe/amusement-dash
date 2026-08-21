@@ -33,6 +33,10 @@ new class extends Component {
     public function toggleFav($cardId)
     {
         if (auth()->check()) {
+            if (!auth()->user()->canWrite()) {
+                $this->dispatch('notify', message: 'You need AmuPlus to perform this action.', type: 'error');
+                return;
+            }
             $user = auth()->user();
             $response = \Illuminate\Support\Facades\Http::withHeaders([
                 'Authorization' => env('AMUSE_API_KEY')
@@ -53,6 +57,10 @@ new class extends Component {
     public function toggleWishlist($cardId)
     {
         if (auth()->check()) {
+            if (!auth()->user()->canWrite()) {
+                $this->dispatch('notify', message: 'You need AmuPlus to perform this action.', type: 'error');
+                return;
+            }
             $user = auth()->user();
             $wishlist = \App\Models\UserWishlist::where('userID', $user->userID)
                 ->where('cardID', (string)$cardId)
