@@ -24,6 +24,12 @@
         <script src="https://unpkg.com/@phosphor-icons/web"></script>
     </head>
     <body class="antialiased">
+        @if(isset($apiIsDown) && $apiIsDown)
+            <div style="background-color: #ef4444; color: white; text-align: center; padding: 0.5rem; font-weight: bold; font-size: 0.9rem; z-index: 50; position: relative;">
+                <i class="ph-bold ph-warning-circle" style="vertical-align: middle; margin-right: 0.25rem;"></i> 
+                The Amusement API is currently unreachable. Some functionality may be limited.
+            </div>
+        @endif
         
         <!-- Navigation -->
         @php

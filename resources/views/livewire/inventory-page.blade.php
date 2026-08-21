@@ -187,7 +187,7 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
             if ($response->successful()) {
                 $storeItems = $response->json();
             }
-        } catch (\Exception $e) {}
+        } catch (\Illuminate\Http\Client\ConnectionException $e) { throw $e; } catch (\Exception $e) {}
 
         return [
             'inventoryItems' => $inventoryItems,

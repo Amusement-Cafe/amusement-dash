@@ -18,4 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+        $exceptions->render(function (\Illuminate\Http\Client\ConnectionException $e, Request $request) {
+            return response()->view('errors.503', ['exception' => $e], 503);
+        });
     })->create();
