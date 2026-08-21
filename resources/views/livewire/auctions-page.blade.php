@@ -438,11 +438,29 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
         <div class="modal-content glass-panel" style="display: flex; flex-direction: row; flex-wrap: wrap; padding: 2rem; gap: 2rem; position: relative; max-width: 1000px; width: 100%; max-height: 90vh; overflow-y: auto; background: var(--bg-dark);">
             <button wire:click="closeModal" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
             
-            <div style="flex: 1; min-width: 300px; display: flex; align-items: flex-start; justify-content: center; background: transparent; border-radius: 8px; padding: 1rem; position: sticky; top: 0;">
+            <div x-data="{ imgStatus: 'loading' }" style="flex: 1; min-width: 300px; display: flex; align-items: flex-start; justify-content: center; background: transparent; border-radius: 8px; padding: 1rem; position: sticky; top: 0; min-height: 400px;">
                 @if($selectedCard->cardURL)
-                    <img src="{{ $selectedCard->cardURL }}" alt="{{ $selectedCard->displayName ?? $selectedCard->cardName }}" style="max-width: 100%; max-height: 500px; object-fit: contain;">
+                    <div style="width: 100%; display: flex; justify-content: center; align-items: center; position: relative; min-height: 300px;">
+                        <div x-show="imgStatus === 'loading'" style="position: absolute; display: flex; align-items: center; justify-content: center;">
+                            <i class="ph-bold ph-spinner" style="font-size: 3rem; color: var(--text-secondary); animation: spin 1s linear infinite;"></i>
+                        </div>
+                        
+                        <div x-cloak x-show="imgStatus === 'error'" style="position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ef4444;">
+                            <i class="ph-fill ph-warning-octagon" style="font-size: 4rem; margin-bottom: 0.5rem;"></i>
+                            <span style="font-size: 1rem; font-weight: bold;">Failed to load image</span>
+                        </div>
+                        
+                        <img src="{{ $selectedCard->cardURL }}" 
+                             alt="{{ $selectedCard->displayName ?? $selectedCard->cardName }}" 
+                             x-on:load="imgStatus = 'loaded'" 
+                             x-on:error="imgStatus = 'error'"
+                             x-show="imgStatus === 'loaded'"
+                             style="max-width: 100%; max-height: 500px; object-fit: contain;">
+                    </div>
                 @else
-                    <span style="color: var(--text-secondary);">No Image Available</span>
+                    <div style="display: flex; height: 100%; width: 100%; align-items: center; justify-content: center;">
+                        <span style="color: var(--text-secondary);">No Image Available</span>
+                    </div>
                 @endif
             </div>
             

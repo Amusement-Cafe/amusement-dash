@@ -431,9 +431,23 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
                                 $transform = "$translateX $scale $rotate";
                                 $hoverTransform = "$translateX scale(" . ($isCenter ? '1.25' : '1.05') . ") $rotate";
                             @endphp
-                            <div style="position: relative; width: 160px; height: 224px; border-radius: 12px; border: 2px solid var(--glass-border); background: rgba(0,0,0,0.5); box-shadow: 0 15px 30px rgba(0,0,0,0.5); z-index: {{ $zIndex }}; transform: {{ $transform }}; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);" onmouseover="this.style.transform='{{ $hoverTransform }}'; this.style.zIndex='20'" onmouseout="this.style.transform='{{ $transform }}'; this.style.zIndex='{{ $zIndex }}'">
+                            <div x-data="{ imgStatus: 'loading' }" style="position: relative; width: 160px; height: 224px; border-radius: 12px; border: 2px solid var(--glass-border); background: rgba(0,0,0,0.5); box-shadow: 0 15px 30px rgba(0,0,0,0.5); z-index: {{ $zIndex }}; transform: {{ $transform }}; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);" onmouseover="this.style.transform='{{ $hoverTransform }}'; this.style.zIndex='20'" onmouseout="this.style.transform='{{ $transform }}'; this.style.zIndex='{{ $zIndex }}'">
                                 @if(!empty($c['cardURL']))
-                                    <img src="{{ $c['cardURL'] }}" alt="Card" style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px;">
+                                    <div x-show="imgStatus === 'loading'" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; border-radius: 10px;">
+                                        <i class="ph-bold ph-spinner" style="font-size: 2rem; color: var(--text-secondary); animation: spin 1s linear infinite;"></i>
+                                    </div>
+                                    
+                                    <div x-cloak x-show="imgStatus === 'error'" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ef4444; border-radius: 10px;">
+                                        <i class="ph-fill ph-warning-octagon" style="font-size: 2.5rem; margin-bottom: 0.5rem;"></i>
+                                        <span style="font-size: 0.7rem; font-weight: bold; text-align: center;">Failed<br>to load</span>
+                                    </div>
+                                    
+                                    <img src="{{ $c['cardURL'] }}" 
+                                         alt="Card" 
+                                         x-on:load="imgStatus = 'loaded'" 
+                                         x-on:error="imgStatus = 'error'"
+                                         x-show="imgStatus === 'loaded'"
+                                         style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px;">
                                 @else
                                     <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--text-secondary);">?</div>
                                 @endif

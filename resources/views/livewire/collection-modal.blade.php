@@ -101,8 +101,22 @@ new class extends Component
                                                 @endfor
                                             </div>
                                             <div class="glass-panel" style="padding: 0.5rem; border: 1px solid var(--glass-border);">
-                                                <div style="height: 250px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; margin-bottom: 0.5rem;">
-                                                    <img src="{{ $sampleCards[$idx]->cardURL }}" alt="Sample Card" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                                                <div x-data="{ imgStatus: 'loading' }" style="height: 250px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; margin-bottom: 0.5rem; position: relative;">
+                                                    <div x-show="imgStatus === 'loading'" style="position: absolute; display: flex; align-items: center; justify-content: center;">
+                                                        <i class="ph-bold ph-spinner" style="font-size: 2rem; color: var(--text-secondary); animation: spin 1s linear infinite;"></i>
+                                                    </div>
+                                                    
+                                                    <div x-cloak x-show="imgStatus === 'error'" style="position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ef4444;">
+                                                        <i class="ph-fill ph-warning-octagon" style="font-size: 2.5rem; margin-bottom: 0.5rem;"></i>
+                                                        <span style="font-size: 0.7rem; font-weight: bold;">Failed to load</span>
+                                                    </div>
+                                                    
+                                                    <img src="{{ $sampleCards[$idx]->cardURL }}" 
+                                                         alt="Sample Card" 
+                                                         x-on:load="imgStatus = 'loaded'" 
+                                                         x-on:error="imgStatus = 'error'"
+                                                         x-show="imgStatus === 'loaded'"
+                                                         style="max-width: 100%; max-height: 100%; object-fit: contain;">
                                                 </div>
                                                 <p style="margin: 0; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $sampleCards[$idx]->displayName ?? $sampleCards[$idx]->cardName }}</p>
                                             </div>

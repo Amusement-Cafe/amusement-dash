@@ -45,9 +45,23 @@
         </div>
     </template>
 
-    <div style="height: 250px; background: transparent; border-radius: 8px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+    <div x-data="{ imgStatus: 'loading' }" style="height: 250px; background: transparent; border-radius: 8px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
         @if(!empty($card->cardURL))
-            <img src="{{ $card->cardURL }}" alt="{{ $card->displayName ?? $card->cardName }}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+            <div x-show="imgStatus === 'loading'" style="position: absolute; display: flex; align-items: center; justify-content: center;">
+                <i class="ph-bold ph-spinner" style="font-size: 2.5rem; color: var(--text-secondary); animation: spin 1s linear infinite;"></i>
+            </div>
+            
+            <div x-cloak x-show="imgStatus === 'error'" style="position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ef4444;">
+                <i class="ph-fill ph-warning-octagon" style="font-size: 3rem; margin-bottom: 0.5rem;"></i>
+                <span style="font-size: 0.8rem; font-weight: bold;">Failed to load</span>
+            </div>
+            
+            <img src="{{ $card->cardURL }}" 
+                 alt="{{ $card->displayName ?? $card->cardName }}" 
+                 x-on:load="imgStatus = 'loaded'" 
+                 x-on:error="imgStatus = 'error'"
+                 x-show="imgStatus === 'loaded'"
+                 style="max-width: 100%; max-height: 100%; object-fit: contain;">
         @else
             <span style="color: var(--text-secondary);">No Image</span>
         @endif

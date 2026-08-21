@@ -396,8 +396,22 @@ new class extends Component {
                                     <img src="https://amu.cards/favicon.ico" alt="Amusement Club" style="width: 60px; height: 60px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.6)); opacity: 0.95;">
                                 </div>
                             </div>
-                            <div class="card-face card-front">
-                                <img src="{{ $card->cardURL }}" alt="{{ $card->displayName }}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 16px; filter: brightness(0.9) saturate(1.15);" />
+                            <div class="card-face card-front" x-data="{ imgStatus: 'loading' }">
+                                <div x-show="imgStatus === 'loading'" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); border-radius: 16px;">
+                                    <i class="ph-bold ph-spinner" style="font-size: 3rem; color: var(--text-secondary); animation: spin 1s linear infinite;"></i>
+                                </div>
+                                
+                                <div x-cloak x-show="imgStatus === 'error'" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); border-radius: 16px; color: #ef4444;">
+                                    <i class="ph-fill ph-warning-octagon" style="font-size: 4rem; margin-bottom: 0.5rem;"></i>
+                                    <span style="font-size: 1rem; font-weight: bold;">Failed to load</span>
+                                </div>
+                                
+                                <img src="{{ $card->cardURL }}" 
+                                     alt="{{ $card->displayName }}" 
+                                     x-on:load="imgStatus = 'loaded'" 
+                                     x-on:error="imgStatus = 'error'"
+                                     x-show="imgStatus === 'loaded'"
+                                     style="width: 100%; height: 100%; object-fit: contain; border-radius: 16px; filter: brightness(0.9) saturate(1.15);" />
                                 
                                 @php $ownedCount = $this->userOwned[$card->cardID] ?? 0; @endphp
                                 @if($ownedCount > 0)
