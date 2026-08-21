@@ -9,7 +9,6 @@ class Card extends Model
     protected $connection = 'mongodb';
     protected $table = 'cards';
 
-    // The primary identifier in the bot is usually cardID or the mongoid
     protected $fillable = [
         'cardID',
         'rarity',
@@ -26,4 +25,16 @@ class Card extends Model
         'meta',
         'stats'
     ];
+
+    protected $appends = ['cardURL'];
+
+    public function getCardURLAttribute()
+    {
+        $val = $this->attributes['cardURL'] ?? null;
+        if ($val && str_starts_with($val, 'https://c.amu.cards')) {
+            $cardRoot = env('AMUSE_CARD_ROOT', 'https://c.amu.cards');
+            return str_replace('https://c.amu.cards', $cardRoot, $val);
+        }
+        return $val;
+    }
 }

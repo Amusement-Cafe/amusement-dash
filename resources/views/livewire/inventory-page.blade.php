@@ -90,7 +90,7 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
             $this->dispatch('log-to-console', ['message' => 'Item is a ticket.']);
             $response = \Illuminate\Support\Facades\Http::withHeaders([
                 'Authorization' => env('AMUSE_API_KEY')
-            ])->timeout(5)->get(env('AMUSE_API_ROOT') . '/items');
+            ])->timeout(5)->get(env('AMUSE_API_ROOT') . '/global/items');
             
             if ($response->successful()) {
                 $storeItems = $response->json();
@@ -182,7 +182,7 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
         try {
             $response = \Illuminate\Support\Facades\Http::withHeaders([
                 'Authorization' => env('AMUSE_API_KEY')
-            ])->timeout(5)->get(env('AMUSE_API_ROOT') . '/items');
+            ])->timeout(5)->get(env('AMUSE_API_ROOT') . '/global/items');
             
             if ($response->successful()) {
                 $storeItems = $response->json();

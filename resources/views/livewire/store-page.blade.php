@@ -18,7 +18,7 @@ new class extends Component {
         try {
             $response = Http::withHeaders([
                 'Authorization' => env('AMUSE_API_KEY')
-            ])->timeout(5)->get(env('AMUSE_API_ROOT') . '/items');
+            ])->timeout(5)->get(env('AMUSE_API_ROOT') . '/global/items');
             
             if ($response->successful()) {
                 $this->items = $response->json();
