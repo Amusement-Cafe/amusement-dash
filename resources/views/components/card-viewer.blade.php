@@ -47,13 +47,13 @@
 
     <div x-data="{ imgStatus: 'loading' }" style="height: 250px; background: transparent; border-radius: 8px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
         @if(!empty($card->cardURL))
-            <div x-show="imgStatus === 'loading'" style="position: absolute; display: flex; align-items: center; justify-content: center;">
+            <div x-show="imgStatus === 'loading'" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
                 <i class="ph-bold ph-spinner" style="font-size: 2.5rem; color: var(--text-secondary); animation: spin 1s linear infinite;"></i>
             </div>
             
-            <div x-cloak x-show="imgStatus === 'error'" style="position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ef4444;">
-                <i class="ph-fill ph-warning-octagon" style="font-size: 3rem; margin-bottom: 0.5rem;"></i>
-                <span style="font-size: 0.8rem; font-weight: bold;">Failed to load</span>
+            <div x-cloak x-show="imgStatus === 'error'" style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ef4444;">
+                <i class="ph-fill ph-warning-octagon" style="font-size: 3rem; margin-bottom: 0.5rem; display: block;"></i>
+                <span style="font-size: 0.8rem; font-weight: bold; display: block; text-align: center;">Failed to load</span>
             </div>
             
             <img src="{{ $card->cardURL }}" 

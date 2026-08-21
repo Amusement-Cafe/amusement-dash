@@ -441,13 +441,13 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
             <div x-data="{ imgStatus: 'loading' }" style="flex: 1; min-width: 300px; display: flex; align-items: flex-start; justify-content: center; background: transparent; border-radius: 8px; padding: 1rem; position: sticky; top: 0; min-height: 400px;">
                 @if($selectedCard->cardURL)
                     <div style="width: 100%; display: flex; justify-content: center; align-items: center; position: relative; min-height: 300px;">
-                        <div x-show="imgStatus === 'loading'" style="position: absolute; display: flex; align-items: center; justify-content: center;">
+                        <div x-show="imgStatus === 'loading'" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
                             <i class="ph-bold ph-spinner" style="font-size: 3rem; color: var(--text-secondary); animation: spin 1s linear infinite;"></i>
                         </div>
                         
-                        <div x-cloak x-show="imgStatus === 'error'" style="position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ef4444;">
-                            <i class="ph-fill ph-warning-octagon" style="font-size: 4rem; margin-bottom: 0.5rem;"></i>
-                            <span style="font-size: 1rem; font-weight: bold;">Failed to load image</span>
+                        <div x-cloak x-show="imgStatus === 'error'" style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ef4444;">
+                            <i class="ph-fill ph-warning-octagon" style="font-size: 4rem; margin-bottom: 0.5rem; display: block;"></i>
+                            <span style="font-size: 1rem; font-weight: bold; display: block; text-align: center;">Failed to load image</span>
                         </div>
                         
                         <img src="{{ $selectedCard->cardURL }}" 
@@ -465,7 +465,7 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
             </div>
             
             <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: center;">
-                <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.5rem; display: block;">
                     <h2 style="font-size: 2rem; margin: 0;">{{ $selectedCard->displayName ?? $selectedCard->cardName }}</h2>
                     <div style="display: flex; gap: 0.5rem;">
                         @if(isset($userOwned[$selectedCard->cardID]))
@@ -552,13 +552,13 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
                     
                     @if($isWinning)
                         <div class="glass-panel" style="padding: 1.5rem; text-align: center; border: 1px solid #10b981; background: rgba(16, 185, 129, 0.1);">
-                            <i class="ph-fill ph-check-circle" style="color: #10b981; font-size: 2.5rem; margin-bottom: 0.5rem;"></i>
+                            <i class="ph-fill ph-check-circle" style="color: #10b981; font-size: 2.5rem; margin-bottom: 0.5rem; display: block;"></i>
                             <p style="color: #10b981; font-weight: bold; font-size: 1.2rem;">You are the highest bidder!</p>
                             <p style="color: var(--text-secondary); font-size: 0.9rem;">We'll notify you if you get outbid.</p>
                         </div>
                     @elseif(!$hasBalance)
                         <div class="glass-panel" style="padding: 1.5rem; text-align: center; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.1);">
-                            <i class="ph-bold ph-warning-circle" style="color: #ef4444; font-size: 2.5rem; margin-bottom: 0.5rem;"></i>
+                            <i class="ph-bold ph-warning-circle" style="color: #ef4444; font-size: 2.5rem; margin-bottom: 0.5rem; display: block;"></i>
                             <p style="color: #ef4444; font-weight: bold; font-size: 1.2rem;">Not enough tomatoes to bid.</p>
                             <p style="color: var(--text-secondary); font-size: 0.9rem;">Current balance: {{ number_format(auth()->user()->tomatoes) }} 🍅</p>
                         </div>

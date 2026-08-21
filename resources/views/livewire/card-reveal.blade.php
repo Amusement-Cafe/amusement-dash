@@ -402,8 +402,8 @@ new class extends Component {
                                 </div>
                                 
                                 <div x-cloak x-show="imgStatus === 'error'" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); border-radius: 16px; color: #ef4444;">
-                                    <i class="ph-fill ph-warning-octagon" style="font-size: 4rem; margin-bottom: 0.5rem;"></i>
-                                    <span style="font-size: 1rem; font-weight: bold;">Failed to load</span>
+                                    <i class="ph-fill ph-warning-octagon" style="font-size: 4rem; margin-bottom: 0.5rem; display: block;"></i>
+                                    <span style="font-size: 1rem; font-weight: bold; display: block; text-align: center;">Failed to load</span>
                                 </div>
                                 
                                 <img src="{{ $card->cardURL }}" 

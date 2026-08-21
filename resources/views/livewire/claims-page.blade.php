@@ -438,7 +438,7 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
                                     </div>
                                     
                                     <div x-cloak x-show="imgStatus === 'error'" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ef4444; border-radius: 10px;">
-                                        <i class="ph-fill ph-warning-octagon" style="font-size: 2.5rem; margin-bottom: 0.5rem;"></i>
+                                        <i class="ph-fill ph-warning-octagon" style="font-size: 2.5rem; margin-bottom: 0.5rem; display: block;"></i>
                                         <span style="font-size: 0.7rem; font-weight: bold; text-align: center;">Failed<br>to load</span>
                                     </div>
                                     
@@ -480,7 +480,7 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
                 </div>
                 
                 <div style="margin-bottom: 2rem;">
-                    <div style="font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Total Cost</div>
+                    <div style="font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;">Total Cost</div>
                     @php $affords = $currentUser->tomatoes >= $this->price; @endphp
                     <div style="font-size: 2.5rem; font-weight: bold; color: {{ $affords ? '#34d399' : '#ef4444' }}; text-shadow: 0 0 20px {{ $affords ? 'rgba(52, 211, 153, 0.4)' : 'rgba(239, 68, 68, 0.4)' }}; display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
                         {{ number_format($this->price) }} 🍅
@@ -622,7 +622,7 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
                                         </div>
                                     @else
                                         <div style="padding: 2rem; text-align: center; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px dashed var(--glass-border);">
-                                            <i class="ph-light ph-empty" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 0.5rem;"></i>
+                                            <i class="ph-light ph-empty" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;"></i>
                                             <div style="color: var(--text-secondary);">No cards were found for this claim.</div>
                                         </div>
                                     @endif

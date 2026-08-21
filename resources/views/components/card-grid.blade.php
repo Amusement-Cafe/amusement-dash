@@ -193,13 +193,13 @@
                     <div x-data="{ imgStatus: 'loading' }" x-init="$watch('selectedCard', () => imgStatus = 'loading')" style="flex: 1; min-width: 300px; display: flex; align-items: flex-start; justify-content: center; background: transparent; border-radius: 8px; padding: 1rem; position: sticky; top: 0; align-self: flex-start; min-height: 400px; position: relative;">
                     <template x-if="selectedCard?.cardURL">
                         <div style="width: 100%; display: flex; justify-content: center; align-items: center; position: relative; min-height: 300px;">
-                            <div x-show="imgStatus === 'loading'" style="position: absolute; display: flex; align-items: center; justify-content: center;">
+                            <div x-show="imgStatus === 'loading'" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
                                 <i class="ph-bold ph-spinner" style="font-size: 3rem; color: var(--text-secondary); animation: spin 1s linear infinite;"></i>
                             </div>
                             
-                            <div x-cloak x-show="imgStatus === 'error'" style="position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ef4444;">
-                                <i class="ph-fill ph-warning-octagon" style="font-size: 4rem; margin-bottom: 0.5rem;"></i>
-                                <span style="font-size: 1rem; font-weight: bold;">Failed to load image</span>
+                            <div x-cloak x-show="imgStatus === 'error'" style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ef4444;">
+                                <i class="ph-fill ph-warning-octagon" style="font-size: 4rem; margin-bottom: 0.5rem; display: block;"></i>
+                                <span style="font-size: 1rem; font-weight: bold; display: block; text-align: center;">Failed to load image</span>
                             </div>
                             
                             <img :src="selectedCard.cardURL" 
@@ -219,7 +219,7 @@
                 
                 <!-- Right Side: Info -->
                 <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: center;">
-                    <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.5rem; display: block;">
                         <h2 style="font-size: 2rem; margin: 0;" x-text="selectedCard?.displayName"></h2>
                         <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
                             <template x-if="selectedCard?.owned">
