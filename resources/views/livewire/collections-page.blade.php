@@ -16,6 +16,8 @@ new #[Layout('layouts.app')] #[Title('Collections')] class extends Component
     #[Url]
     public $search = '';
 
+    public array $collectionImages = [];
+
     public function updatedSearch()
     {
         $this->resetPage();
@@ -33,25 +35,23 @@ new #[Layout('layouts.app')] #[Title('Collections')] class extends Component
         $query->orderBy('name', 'asc');
         $collections = $query->paginate(24);
         
-        $collectionImages = [];
-        
         foreach ($collections as $col) {
-            $cards = Card::where('collectionID', $col->collectionID)
-                ->where('rarity', 3)
-                ->get();
-            
-            if ($cards->isEmpty()) {
-                $cards = Card::where('collectionID', $col->collectionID)->get();
+            if (!array_key_exists($col->collectionID, $this->collectionImages)) {
+                $coverCard = Card::where('collectionID', $col->collectionID)
+                    ->where('rarity', 3)
+                    ->first();
+                
+                if (!$coverCard) {
+                    $coverCard = Card::where('collectionID', $col->collectionID)->first();
+                }
+                
+                $this->collectionImages[$col->collectionID] = $coverCard ? $coverCard->cardURL : null;
             }
-            
-            $coverCard = $cards->isNotEmpty() ? $cards->random() : null;
-            
-            $collectionImages[$col->collectionID] = $coverCard ? $coverCard->cardURL : null;
         }
 
         return [
             'collections' => $collections,
-            'collectionImages' => $collectionImages,
+            'totalCount' => cache()->remember('total_collections_count', 3600, fn() => BotCollection::count()),
         ];
     }
 };
@@ -60,7 +60,7 @@ new #[Layout('layouts.app')] #[Title('Collections')] class extends Component
 <div>
     <div style="margin-bottom: 2rem;">
         <h1 style="font-size: 2.5rem; margin: 0;">Card Collections</h1>
-        <p style="color: var(--text-secondary); margin-top: 0.5rem;">Explore all {{ \App\Models\BotCollection::count() }} collections available in the bot.</p>
+        <p style="color: var(--text-secondary); margin-top: 0.5rem;">Explore all {{ $totalCount }} collections available in the bot.</p>
     </div>
 
     <div class="glass-panel" style="padding: 1rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 1rem;">

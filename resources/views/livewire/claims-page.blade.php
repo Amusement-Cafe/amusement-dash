@@ -31,6 +31,7 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
     
     public bool $showRevealModal = false;
     public array $revealedCards = [];
+    public ?string $revealedClaimID = null;
 
     public function selectClaim($id)
     {
@@ -43,6 +44,14 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
     {
         $this->showRevealModal = false;
         $this->revealedCards = [];
+        
+        if ($this->revealedClaimID) {
+            $claimID = $this->revealedClaimID;
+            $this->revealedClaimID = null;
+            $this->redirect('/cards?claimID=' . $claimID, navigate: true);
+            return;
+        }
+        
         $this->resetPage();
     }
 
@@ -215,7 +224,9 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
 
         if ($response->successful()) {
             $data = $response->json();
+            \Illuminate\Support\Facades\Log::info('Claim response', $data);
             $this->revealedCards = $data['cards'];
+            $this->revealedClaimID = $data['claimID'] ?? null;
             $this->showRevealModal = true;
             // Refresh user data for updated balance display
             auth()->user()->refresh();

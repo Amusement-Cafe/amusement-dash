@@ -221,7 +221,7 @@
                                     </button>
                                 </template>
                                 
-                                <template x-if="!selectedCard || selectedCard?.userCopies <= 0">
+                                <template x-if="!selectedCard || selectedCard?.userCopies <= 0 || selectedCard?.wishlisted">
                                     <button @click="$dispatch('toggle-wishlist', { cardId: selectedCard.cardID }); if(!selectedCard.wishlisted) createBurst($event, 'ph-fill ph-star', '#fbbf24');" 
                                             title="Wishlist"
                                             class="card-action-icon-btn"

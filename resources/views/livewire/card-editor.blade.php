@@ -72,11 +72,11 @@ new #[Layout('layouts.app')] #[Title('Card Editor')] class extends Component
     public function checkDirty()
     {
         $this->isDirty = false;
-        if ($this->editedData['displayName'] !== $this->originalData['displayName']) {
+        if ($this->editedData['displayName'] != $this->originalData['displayName']) {
             $this->isDirty = true;
         }
         foreach ($this->editedData['meta'] as $key => $val) {
-            if ($val !== $this->originalData['meta'][$key]) {
+            if ($val != $this->originalData['meta'][$key]) {
                 $this->isDirty = true;
             }
         }
@@ -220,14 +220,22 @@ new #[Layout('layouts.app')] #[Title('Card Editor')] class extends Component
             <div style="position: sticky; top: 6rem;">
                 <x-card-viewer :card="$card" collectionName="{{ $card->collectionID }}" />
                 
-                <div class="glass-panel" style="margin-top: 1.5rem; padding: 1rem; border: 1px dashed var(--glass-border);">
-                    <p style="margin: 0 0 0.5rem 0; color: var(--text-secondary); font-size: 0.9rem;">Card ID</p>
-                    <p style="margin: 0; font-size: 1.2rem; font-weight: bold;">#{{ $card->cardID }}</p>
-                </div>
-                
-                <div class="glass-panel" style="margin-top: 1rem; padding: 1rem; border: 1px dashed var(--glass-border);">
-                    <p style="margin: 0 0 0.5rem 0; color: var(--text-secondary); font-size: 0.9rem;">Collection</p>
-                    <p style="margin: 0; font-size: 1.2rem; font-weight: bold;">{{ $card->collectionID }}</p>
+                <!-- Submit Panel -->
+                <div class="glass-panel" style="margin-top: 1.5rem; padding: 1.5rem; background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(12px); border: 1px solid {{ $isDirty ? 'var(--accent-solid)' : 'rgba(255,255,255,0.1)' }}; display: flex; flex-direction: column; gap: 1rem; align-items: stretch; text-align: center;">
+                    <div style="display: flex; justify-content: center;">
+                        @if($isDirty)
+                            <span style="color: var(--accent-solid); font-weight: bold; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="ph-fill ph-warning-circle"></i> Unsaved changes
+                            </span>
+                        @else
+                            <span style="color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="ph-fill ph-check-circle"></i> Up to date
+                            </span>
+                        @endif
+                    </div>
+                    <button wire:click="save" style="background: {{ $isDirty ? 'var(--accent-solid)' : 'rgba(255,255,255,0.05)' }}; color: {{ $isDirty ? 'white' : 'var(--text-secondary)' }}; padding: 0.8rem 1.5rem; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: {{ $isDirty ? 'pointer' : 'not-allowed' }}; transition: all 0.2s; display: flex; justify-content: center; align-items: center; gap: 0.5rem;" {{ !$isDirty ? 'disabled' : '' }}>
+                        <i class="ph-bold ph-floppy-disk"></i> Submit
+                    </button>
                 </div>
             </div>
         </div>
@@ -243,8 +251,8 @@ new #[Layout('layouts.app')] #[Title('Card Editor')] class extends Component
                 
                 <div style="margin-bottom: 1rem;">
                     <label style="display: block; color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.9rem;">Display Name</label>
-                    <input type="text" wire:model.live="editedData.displayName" class="input-field" style="width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.3); border: 1px solid {{ $editedData['displayName'] !== $originalData['displayName'] ? '#3b82f6' : 'rgba(255,255,255,0.1)' }}; color: white; border-radius: 8px;">
-                    @if($editedData['displayName'] !== $originalData['displayName'])
+                    <input type="text" wire:model.live="editedData.displayName" class="input-field" style="width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.3); border: 1px solid {{ $editedData['displayName'] != $originalData['displayName'] ? '#3b82f6' : 'rgba(255,255,255,0.1)' }}; color: white; border-radius: 8px;">
+                    @if($editedData['displayName'] != $originalData['displayName'])
                         <span style="color: #3b82f6; font-size: 0.8rem; margin-top: 0.3rem; display: block;">
                             <i class="ph-bold ph-pencil-simple"></i> Changed from "{{ $originalData['displayName'] }}"
                         </span>
@@ -263,7 +271,7 @@ new #[Layout('layouts.app')] #[Title('Card Editor')] class extends Component
                         @if($fetchError)
                             <span style="color: #ef4444; font-size: 0.8rem;">{{ $fetchError }}</span>
                         @endif
-                        <button wire:click="fetchDanbooru" wire:loading.attr="disabled" class="btn btn-primary" style="background: {{ !empty($editedData['meta']['booruID']) ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)' }}; border: 1px solid {{ !empty($editedData['meta']['booruID']) ? '#10b981' : 'rgba(255,255,255,0.1)' }}; color: {{ !empty($editedData['meta']['booruID']) ? '#10b981' : 'var(--text-secondary)' }}; padding: 0.5rem 1rem; border-radius: 6px; cursor: {{ !empty($editedData['meta']['booruID']) ? 'pointer' : 'not-allowed' }}; transition: all 0.2s;" {{ empty($editedData['meta']['booruID']) ? 'disabled' : '' }}>
+                        <button wire:click="fetchDanbooru" wire:loading.attr="disabled" class="btn" style="box-shadow: none; background: {{ !empty($editedData['meta']['booruID']) ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)' }}; border: 1px solid {{ !empty($editedData['meta']['booruID']) ? '#10b981' : 'rgba(255,255,255,0.1)' }}; color: {{ !empty($editedData['meta']['booruID']) ? '#10b981' : 'var(--text-secondary)' }}; padding: 0.5rem 1rem; border-radius: 6px; cursor: {{ !empty($editedData['meta']['booruID']) ? 'pointer' : 'not-allowed' }}; transition: all 0.2s;" {{ empty($editedData['meta']['booruID']) ? 'disabled' : '' }}>
                             <span wire:loading.remove wire:target="fetchDanbooru"><i class="ph-bold ph-download-simple"></i> Fetch from Danbooru</span>
                             <span wire:loading wire:target="fetchDanbooru"><i class="ph-bold ph-spinner" style="animation: spin 1s linear infinite;"></i> Fetching...</span>
                         </button>
@@ -274,11 +282,11 @@ new #[Layout('layouts.app')] #[Title('Card Editor')] class extends Component
                     @foreach(['booruID', 'booruScore', 'booruRating', 'artist', 'pixivID', 'source', 'image', 'contributor'] as $metaField)
                         @php
                             $isReadOnly = in_array($metaField, ['booruScore', 'booruRating']);
-                            $isChanged = $editedData['meta'][$metaField] !== $originalData['meta'][$metaField];
+                            $isChanged = $editedData['meta'][$metaField] != $originalData['meta'][$metaField];
                         @endphp
                         <div>
                             <label style="display: flex; justify-content: space-between; color: var(--text-secondary); margin-bottom: 0.3rem; font-size: 0.85rem;">
-                                <span>{{ ucfirst(preg_replace('/([A-Z])/', ' $1', $metaField)) }}</span>
+                                <span>{{ ucfirst(preg_replace('/([a-z])([A-Z])/', '$1 $2', $metaField)) }}</span>
                                 @if($isReadOnly)
                                     <span style="color: #fbbf24; font-size: 0.7rem;"><i class="ph-bold ph-lock-key"></i> Read-Only</span>
                                 @endif
@@ -406,24 +414,8 @@ new #[Layout('layouts.app')] #[Title('Card Editor')] class extends Component
                 </div>
             </div>
 
-            <!-- Submit Panel -->
-            <div class="glass-panel" style="padding: 1.5rem; background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(12px); border: 1px solid {{ $isDirty ? 'var(--accent-solid)' : 'rgba(255,255,255,0.1)' }}; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    @if($isDirty)
-                        <span style="color: var(--accent-solid); font-weight: bold; display: flex; align-items: center; gap: 0.5rem;">
-                            <i class="ph-fill ph-warning-circle"></i> Unsaved changes
-                        </span>
-                    @else
-                        <span style="color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
-                            <i class="ph-fill ph-check-circle"></i> Up to date
-                        </span>
-                    @endif
-                </div>
-                <button wire:click="save" style="background: {{ $isDirty ? 'var(--accent-solid)' : 'rgba(255,255,255,0.05)' }}; color: {{ $isDirty ? 'white' : 'var(--text-secondary)' }}; padding: 0.8rem 2rem; border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; cursor: {{ $isDirty ? 'pointer' : 'not-allowed' }}; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;" {{ !$isDirty ? 'disabled' : '' }}>
-                    <i class="ph-bold ph-floppy-disk"></i> Submit Edits
-                </button>
-            </div>
             
+
         </div>
     </div>
 </div>

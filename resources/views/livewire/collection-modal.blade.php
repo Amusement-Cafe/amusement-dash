@@ -15,12 +15,12 @@ new class extends Component
         $this->sampleCards = null;
         $this->totalCardsInSelected = null;
         
-        $c1 = Card::where('collectionID', $collectionID)->where('rarity', 1)->get();
-        $c2 = Card::where('collectionID', $collectionID)->where('rarity', 2)->get();
-        $c3 = Card::where('collectionID', $collectionID)->where('rarity', 3)->get();
+        $c1 = Card::where('collectionID', $collectionID)->where('rarity', 1)->first();
+        $c2 = Card::where('collectionID', $collectionID)->where('rarity', 2)->first();
+        $c3 = Card::where('collectionID', $collectionID)->where('rarity', 3)->first();
 
-        if ($c2->isEmpty() && $c3->isEmpty() && $c1->count() > 0) {
-            $randoms = $c1->random(min(3, $c1->count()))->values();
+        if (!$c2 && !$c3 && $c1) {
+            $randoms = Card::where('collectionID', $collectionID)->where('rarity', 1)->limit(3)->get();
             $this->sampleCards = [
                 0 => $randoms->get(0),
                 1 => $randoms->get(1),
@@ -28,9 +28,9 @@ new class extends Component
             ];
         } else {
             $this->sampleCards = [
-                0 => $c1->isNotEmpty() ? $c1->random() : null,
-                1 => $c2->isNotEmpty() ? $c2->random() : null,
-                2 => $c3->isNotEmpty() ? $c3->random() : null,
+                0 => $c1,
+                1 => $c2,
+                2 => $c3,
             ];
         }
         
