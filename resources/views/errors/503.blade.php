@@ -8,7 +8,7 @@
         <!-- Phosphor Icons -->
         <script src="https://unpkg.com/@phosphor-icons/web"></script>
         
-        <!-- Application Styles (reuse existing variables if possible) -->
+        <!-- Application Styles -->
         <style>
             :root {
                 --bg-color: #09090b;
@@ -29,6 +29,7 @@
                 justify-content: center;
                 min-height: 100vh;
                 text-align: center;
+                transition: background-color 0.2s;
             }
             .error-container {
                 background: var(--glass-bg);
@@ -38,11 +39,12 @@
                 max-width: 500px;
                 backdrop-filter: blur(12px);
                 box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-                animation: floatIn 0.5s ease-out;
+                animation: floatIn 0.3s ease-out;
+                position: relative;
             }
             @keyframes floatIn {
-                from { opacity: 0; transform: translateY(20px); }
-                to { opacity: 1; transform: translateY(0); }
+                from { opacity: 0; transform: scale(0.95); }
+                to { opacity: 1; transform: scale(1); }
             }
             .icon-wrapper {
                 color: #ef4444;
@@ -73,10 +75,28 @@
             .btn:hover {
                 opacity: 0.9;
             }
+            .close-btn {
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+                background: transparent;
+                border: none;
+                color: var(--text-secondary);
+                font-size: 1.5rem;
+                cursor: pointer;
+                transition: color 0.2s;
+                display: none; /* hidden by default, shown if in iframe */
+            }
+            .close-btn:hover {
+                color: white;
+            }
         </style>
     </head>
     <body>
         <div class="error-container">
+            <button id="close-x-btn" class="close-btn">
+                <i class="ph-bold ph-x"></i>
+            </button>
             <div class="icon-wrapper">
                 <i class="ph-duotone ph-warning-octagon"></i>
             </div>
@@ -88,9 +108,73 @@
             <button onclick="window.location.reload()" class="btn">
                 <i class="ph-bold ph-arrows-clockwise" style="margin-right: 0.5rem; vertical-align: middle;"></i> Try Again
             </button>
-            <button onclick="window.history.back()" class="btn" style="background: rgba(255,255,255,0.1); margin-left: 0.5rem; border: 1px solid var(--glass-border);">
+            <button id="go-back-btn" class="btn" style="background: rgba(255,255,255,0.1); margin-left: 0.5rem; border: 1px solid var(--glass-border);">
                 Go Back
             </button>
         </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const goBackBtn = document.getElementById('go-back-btn');
+                const closeXBtn = document.getElementById('close-x-btn');
+                
+                // If we are inside an iframe (e.g. Livewire's error modal)
+                if (window.parent !== window) {
+                    // Make body transparent so the parent backdrop shows through
+                    document.body.style.backgroundColor = 'transparent';
+                    
+                    // Show the 'X' button
+                    closeXBtn.style.display = 'block';
+                    
+                    // Attempt to style the parent iframe wrapper to be fully transparent/borderless
+                    try {
+                        const parentDoc = window.parent.document;
+                        const style = parentDoc.createElement('style');
+                        style.innerHTML = `
+                            #livewire-error {
+                                z-index: 999999 !important;
+                            }
+                            #livewire-error > div {
+                                background: transparent !important;
+                                box-shadow: none !important;
+                                padding: 0 !important;
+                            }
+                            #livewire-error iframe {
+                                border-radius: 0 !important;
+                            }
+                        `;
+                        parentDoc.head.appendChild(style);
+                    } catch(e) {
+                        console.error('Could not style parent document', e);
+                    }
+                    
+                    // Function to dismiss the Livewire modal
+                    const dismissModal = function(e) {
+                        e.preventDefault();
+                        try {
+                            const parentDoc = window.parent.document;
+                            const lwError = parentDoc.getElementById('livewire-error');
+                            if (lwError) {
+                                lwError.remove();
+                                parentDoc.body.style.overflow = '';
+                            }
+                        } catch(e) {
+                            console.error('Could not remove modal', e);
+                        }
+                    };
+                    
+                    goBackBtn.innerHTML = 'Dismiss';
+                    goBackBtn.onclick = dismissModal;
+                    closeXBtn.onclick = dismissModal;
+                    
+                } else {
+                    // Standard page load behavior
+                    goBackBtn.onclick = function(e) {
+                        e.preventDefault();
+                        window.history.back();
+                    };
+                }
+            });
+        </script>
     </body>
 </html>
