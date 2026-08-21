@@ -129,21 +129,44 @@
                     // Attempt to style the parent iframe wrapper to be fully transparent/borderless
                     try {
                         const parentDoc = window.parent.document;
+                        const lwError = parentDoc.getElementById('livewire-error');
+                        
+                        if (lwError) {
+                            // Strip inline styles set by Livewire
+                            lwError.style.cssText = `
+                                z-index: 999999 !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                                width: 100% !important;
+                                height: 100% !important;
+                                max-width: 100% !important;
+                                max-height: 100% !important;
+                                border: none !important;
+                                background: transparent !important;
+                            `;
+                            
+                            // The iframe is inside the dialog
+                            const iframe = lwError.querySelector('iframe');
+                            if (iframe) {
+                                iframe.style.cssText = `
+                                    width: 100% !important;
+                                    height: 100% !important;
+                                    border: none !important;
+                                    background: transparent !important;
+                                    border-radius: 0 !important;
+                                `;
+                            }
+                        }
+                        
+                        // Also inject a style block just in case
                         const style = parentDoc.createElement('style');
                         style.innerHTML = `
-                            #livewire-error {
-                                z-index: 999999 !important;
-                            }
-                            #livewire-error > div {
-                                background: transparent !important;
-                                box-shadow: none !important;
-                                padding: 0 !important;
-                            }
-                            #livewire-error iframe {
-                                border-radius: 0 !important;
+                            dialog#livewire-error::backdrop {
+                                background: rgba(0,0,0,0.8) !important;
                             }
                         `;
                         parentDoc.head.appendChild(style);
+                        
                     } catch(e) {
                         console.error('Could not style parent document', e);
                     }
