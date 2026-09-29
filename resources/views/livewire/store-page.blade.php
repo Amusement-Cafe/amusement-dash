@@ -291,7 +291,7 @@ new class extends Component {
                     
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-top: auto; position: relative; z-index: 20;">
                         <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.5); padding: 0.5rem 1rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-                            <span>🍅</span>
+                            <span>{{ $item['type'] === 'recipe' ? '🍅' : '🍋' }}</span>
                             <span style="font-weight: bold; color: white;">{{ number_format(isset($item['cost']) && $item['cost'] > 1 ? $item['cost'] : 1000) }}</span>
                         </div>
                         
