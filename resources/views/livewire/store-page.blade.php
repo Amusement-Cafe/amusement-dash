@@ -64,11 +64,11 @@ new class extends Component {
     public bool $showPreview = false;
     public array $previewCards = [];
     public int $previewRarity = 1;
-    public bool $previewRandom = false;
+    public bool $previewSingle = false;
 
-    public function previewTicket($rarity, $isRandom) {
+    public function previewTicket($rarity, $isSingle) {
         $this->previewRarity = $rarity;
-        $this->previewRandom = $isRandom;
+        $this->previewSingle = $isSingle;
         
         $cardIDs = \App\Models\Card::where('rarity', (int)$rarity)->pluck('cardID')->toArray();
         if (!empty($cardIDs)) {
@@ -218,13 +218,11 @@ new class extends Component {
                     
                     $isParsedTicket = false;
                     $ticketAmount = 1;
-                    $ticketRandom = false;
                     $ticketStars = '';
                     
                     if ($item['type'] === 'ticket' && preg_match('/^(\d+)x\s+(Random\s+)?([★]+)\s+Claim Ticket/i', trim($displayName), $matches)) {
                         $isParsedTicket = true;
                         $ticketAmount = $matches[1];
-                        $ticketRandom = !empty(trim($matches[2] ?? ''));
                         $ticketStars = $matches[3];
                         $displayName = "Claim Ticket";
                     }
@@ -233,7 +231,7 @@ new class extends Component {
                     
                     @if($isParsedTicket)
                         <div class="preview-overlay">
-                            <button wire:click="previewTicket({{ mb_strlen($ticketStars) }}, {{ $ticketRandom ? 'true' : 'false' }})" class="preview-btn">
+                            <button wire:click="previewTicket({{ mb_strlen($ticketStars) }}, {{ !empty($item['single']) ? 'true' : 'false' }})" class="preview-btn">
                                 <i class="ph-bold ph-eye"></i> Preview Cards
                             </button>
                         </div>
@@ -259,19 +257,14 @@ new class extends Component {
                     
                     <div style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem; flex-grow: 1;">
                         @if($isParsedTicket)
-                            @if($ticketRandom)
-                                <div style="display: flex; align-items: center; gap: 0.4rem; color: #a855f7; margin-bottom: 0.3rem; font-weight: bold;">
-                                    <i class="ph-bold ph-dice-three"></i> Random Drop
-                                </div>
-                                <p style="margin: 0 0 0.8rem 0; font-size: 0.85rem; opacity: 0.8;">Yields random cards from the pool.</p>
-                            @else
-                                <div style="display: flex; align-items: center; gap: 0.4rem; color: #34d399; margin-bottom: 0.3rem; font-weight: bold;">
-                                    <i class="ph-bold ph-hand-pointing"></i> Select Card
-                                </div>
-                                <p style="margin: 0 0 0.8rem 0; font-size: 0.85rem; opacity: 0.8;">Pick specific cards from the pool.</p>
-                            @endif
+                            <div style="display: flex; align-items: center; gap: 0.4rem; color: #a855f7; margin-bottom: 0.3rem; font-weight: bold;">
+                                <i class="ph-bold ph-dice-three"></i> Random Drop
+                            </div>
+                            <p style="margin: 0 0 0.8rem 0; font-size: 0.85rem; opacity: 0.8;">
+                                {{ !empty($item['single']) ? 'Yields random cards, all from one collection rolled on purchase.' : 'Yields random cards from randomly chosen collections.' }}
+                            </p>
                         @endif
-                        
+
                         @if(isset($item['uses']) && $item['uses'] > 0)
                             <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.3rem;">
                                 <i class="ph-bold ph-arrows-clockwise"></i> {{ $item['uses'] }} Uses
@@ -330,10 +323,11 @@ new class extends Component {
                         </h2>
                         
                         <p style="color: var(--text-secondary); margin-bottom: 2rem; font-size: 1.1rem;">
-                            @if($previewRandom)
-                                <span style="color: #a855f7;"><i class="ph-bold ph-dice-three"></i> Random Drop:</span> You will receive random cards from the {{ $previewRarity }}-Star pool. Here are some examples of what you might get:
+                            <span style="color: #a855f7;"><i class="ph-bold ph-dice-three"></i> Random Drop:</span>
+                            @if($previewSingle)
+                                You will receive random cards from the {{ $previewRarity }}-Star pool, all from a single collection that is rolled when you buy the ticket. Here are some examples of what you might get:
                             @else
-                                <span style="color: #34d399;"><i class="ph-bold ph-hand-pointing"></i> Your Choice:</span> You can select exactly which card you want from the {{ $previewRarity }}-Star pool! Here are some examples:
+                                You will receive random cards from the {{ $previewRarity }}-Star pool, each from a randomly chosen collection. Here are some examples of what you might get:
                             @endif
                         </p>
                         

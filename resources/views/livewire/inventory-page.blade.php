@@ -16,39 +16,6 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
     public $revealedCards = [];
     public $showCardReveal = false;
 
-    public $showCardSearch = false;
-    public $ticketStars = 0;
-    public $ticketAmount = 0;
-    public $ticketCollection = null;
-
-    #[On('cards-selected')]
-    public function cardsSelected($data)
-    {
-        $this->revealedCards = $data['cards'];
-        $this->showCardSearch = false;
-        $this->showCardReveal = true;
-
-        $user = auth()->user();
-        $item = UserInventory::where('userID', $user->userID)
-            ->get()
-            ->firstWhere('id', $this->selectedItemId);
-            
-        if($item) {
-            \Illuminate\Support\Facades\Http::withHeaders([
-                'Authorization' => env('AMUSE_API_KEY')
-            ])->timeout(5)->delete(env('AMUSE_API_ROOT') . '/user/inventory?user=' . $user->userID, [
-                'id' => $item->id
-            ]);
-            // $item->delete(); // Deprecated DB write in favor of API route
-        }
-    }
-
-    #[On('close-search')]
-    public function closeCardSearch()
-    {
-        $this->showCardSearch = false;
-    }
-
     #[On('close-reveal')]
     public function closeCardReveal()
     {
@@ -59,13 +26,11 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
     public function addCardsToInventory($cardIds)
     {
         $user = auth()->user();
-        
         \Illuminate\Support\Facades\Http::withHeaders([
             'Authorization' => env('AMUSE_API_KEY')
         ])->timeout(5)->put(env('AMUSE_API_ROOT') . '/user/cards?user=' . $user->userID, [
             'cards' => $cardIds
         ]);
-        
         // Deprecated raw DB writes for usercards in favor of API route
     }
 
@@ -79,8 +44,7 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
         if ($itemId) {
             $this->selectedItemId = $itemId;
         }
-        $this->dispatch('log-to-console', ['message' => 'confirmUseItem called']);
-        
+
         $user = auth()->user();
         $item = UserInventory::where('userID', $user->userID)
             ->get()
@@ -91,82 +55,95 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
             return;
         }
 
-        if ($item->type === 'ticket') {
-            $this->dispatch('log-to-console', ['message' => 'Item is a ticket.']);
+        if ($item->type !== 'ticket') {
+            $this->dispatch('log-to-console', ['message' => 'Item is not a ticket.']);
+            return;
+        }
+
+        $cardIDs = $this->drawTicketCards($item);
+        if (empty($cardIDs)) {
+            $this->dispatch('notify', message: 'No cards are available for this ticket.', type: 'error');
+            return;
+        }
+
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => env('AMUSE_API_KEY')
+        ])->timeout(5)->delete(env('AMUSE_API_ROOT') . '/user/inventory?user=' . $user->userID, [
+            'id' => $item->id
+        ]);
+        if (!$response->successful()) {
+            $this->dispatch('notify', message: 'Could not use this ticket, please try again.', type: 'error');
+            return;
+        }
+
+        $this->revealedCards = $cardIDs;
+        $this->showCardReveal = true;
+    }
+
+    /**
+     * Mirrors ticketRedemption() in the bot (bots/amusement/helpers/tickets.js).
+     * The itemID encodes the ticket: ticket<amount>x<stars>[s|r].
+     * A ticket bound to a collection (rolled at purchase) draws every card from
+     * that collection; an unbound ticket rolls a new collection for each card.
+     * Cards are drawn with replacement, so duplicates are possible.
+     */
+    private function drawTicketCards($item): array
+    {
+        if (!preg_match('/^ticket(\d+)x(\d)/', $item->itemID ?? '', $matches)) {
+            $this->dispatch('log-to-console', ['message' => 'Could not parse ticket ID.']);
+            return [];
+        }
+        $amount = (int) $matches[1];
+        $stars = (int) $matches[2];
+
+        $pool = \App\Models\Card::where('rarity', $stars)
+            ->where('canDrop', true)
+            ->get(['cardID', 'collectionID'])
+            ->groupBy('collectionID');
+
+        // Collections missing the field default to inClaimPool = true in the bot's schema
+        $claimCols = BotCollection::all()
+            ->filter(fn ($col) => $col->inClaimPool ?? true)
+            ->pluck('collectionID')
+            ->filter(fn ($id) => $pool->has($id))
+            ->values();
+
+        if ($stars === 4) {
+            $collectionID = 'special';
+        } else if (!empty($item->collectionID)) {
+            $collectionID = $item->collectionID;
+        } else {
+            $storeItem = $this->storeItems()[$item->itemID] ?? null;
+            // Single tickets given before the purchase-time roll existed have no
+            // collection yet, so roll it now and keep every card in it
+            $collectionID = !empty($storeItem['single']) && $claimCols->isNotEmpty()
+                ? $claimCols->random()
+                : null;
+        }
+
+        if ($collectionID !== null ? !$pool->has($collectionID) : $claimCols->isEmpty()) {
+            return [];
+        }
+
+        $cardIDs = [];
+        for ($i = 0; $i < $amount; $i++) {
+            $colID = $collectionID ?? $claimCols->random();
+            $cardIDs[] = $pool[$colID]->random()->cardID;
+        }
+        return $cardIDs;
+    }
+
+    private function storeItems(): array
+    {
+        try {
             $response = \Illuminate\Support\Facades\Http::withHeaders([
                 'Authorization' => env('AMUSE_API_KEY')
             ])->timeout(5)->get(env('AMUSE_API_ROOT') . '/global/items');
-            
             if ($response->successful()) {
-                $storeItems = $response->json();
-                $storeItem = $storeItems[$item->itemID] ?? null;
-                $displayName = $storeItem && !empty($storeItem['displayName']) 
-                    ? str_replace('`', '', $storeItem['displayName']) 
-                    : ucfirst($item->itemID ?? $item->type);
-
-                $isParsedTicket = false;
-                $ticketAmount = 1;
-                $ticketRandom = false;
-                $ticketStars = '';
-                
-                if (preg_match('/^(\d+)x\s+(Random\s+)?([★]+)\s+Claim Ticket/i', trim($displayName), $matches)) {
-                    $isParsedTicket = true;
-                    $this->ticketAmount = $matches[1];
-                    $ticketRandom = !empty(trim($matches[2] ?? ''));
-                    $this->ticketStars = mb_strlen($matches[3], 'UTF-8');
-                    $this->dispatch('log-to-console', ['message' => "isParsedTicket: $isParsedTicket, ticketAmount: $this->ticketAmount, ticketRandom: $ticketRandom, ticketStars: $this->ticketStars"]);
-                }
-
-                if ($isParsedTicket) {
-                    $query = \App\Models\Card::where('rarity', $this->ticketStars)->where('canDrop', true);
-
-                    if ($this->ticketStars == 4) {
-                        $this->ticketCollection = 'special';
-                        $query->where('collectionID', 'special');
-                    } else {
-                        $excludedCols = \App\Models\BotCollection::all()->filter(function($col) {
-                            return !empty($col->promo) || in_array($col->collectionID, ['limitedcraft', 'special']);
-                        })->pluck('collectionID')->toArray();
-                        
-                        $query->whereNotIn('collectionID', $excludedCols);
-
-                        if ($storeItem && isset($storeItem['single']) && $storeItem['single']) {
-                            $validCols = \App\Models\BotCollection::all()->filter(function($col) use ($excludedCols) {
-                                return !in_array($col->collectionID, $excludedCols);
-                            });
-                            $this->ticketCollection = $validCols->random()->collectionID;
-                            $query->where('collectionID', $this->ticketCollection);
-                        } else if (isset($item->collectionID) && $item->collectionID !== 'random') {
-                            $this->ticketCollection = $item->collectionID;
-                            $query->where('collectionID', $this->ticketCollection);
-                        }
-                    }
-
-                    if ($ticketRandom) {
-                        $this->dispatch('log-to-console', ['message' => 'Ticket is random.']);
-                        $cards = $query->get();
-                        $this->revealedCards = $cards->shuffle()->take($this->ticketAmount)->pluck('cardID')->toArray();
-                        $this->showCardReveal = true;
-                        
-                        \Illuminate\Support\Facades\Http::withHeaders([
-                            'Authorization' => env('AMUSE_API_KEY')
-                        ])->timeout(5)->delete(env('AMUSE_API_ROOT') . '/user/inventory?user=' . $user->userID, [
-                            'id' => $item->id
-                        ]);
-                        // $item->delete(); // Deprecated DB write in favor of API route
-                    } else {
-                        $this->dispatch('log-to-console', ['message' => 'Ticket is not random.']);
-                        $this->showCardSearch = true;
-                    }
-                } else {
-                    $this->dispatch('log-to-console', ['message' => 'Could not parse ticket name.']);
-                }
-            } else {
-                $this->dispatch('log-to-console', ['message' => 'Could not fetch store items.']);
+                return $response->json();
             }
-        } else {
-            $this->dispatch('log-to-console', ['message' => 'Item is not a ticket.']);
-        }
+        } catch (\Illuminate\Http\Client\ConnectionException $e) { throw $e; } catch (\Exception $e) {}
+        return [];
     }
 
     public function with(): array
@@ -183,16 +160,7 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
             $collections = BotCollection::whereIn('collectionID', $collectionIDs)->get()->keyBy('collectionID')->toArray();
         }
 
-        $storeItems = [];
-        try {
-            $response = \Illuminate\Support\Facades\Http::withHeaders([
-                'Authorization' => env('AMUSE_API_KEY')
-            ])->timeout(5)->get(env('AMUSE_API_ROOT') . '/global/items');
-            
-            if ($response->successful()) {
-                $storeItems = $response->json();
-            }
-        } catch (\Illuminate\Http\Client\ConnectionException $e) { throw $e; } catch (\Exception $e) {}
+        $storeItems = $this->storeItems();
 
         return [
             'inventoryItems' => $inventoryItems,
@@ -206,10 +174,9 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
 <div x-data="{ 
     showConfirmModal: false, 
     selectedItemId: null,
-    showSearch: @entangle('showCardSearch').live,
     showReveal: @entangle('showCardReveal').live
 }" 
-x-effect="document.body.style.overflow = (showConfirmModal || showSearch || showReveal) ? 'hidden' : ''">
+x-effect="document.body.style.overflow = (showConfirmModal || showReveal) ? 'hidden' : ''">
     <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-end;">
         <div>
             <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 1rem;">
@@ -261,13 +228,11 @@ x-effect="document.body.style.overflow = (showConfirmModal || showSearch || show
                         
                     $itemIsParsedTicket = false;
                     $itemTicketAmount = 1;
-                    $itemTicketRandom = false;
                     $itemTicketStars = '';
                     
                     if ($type === 'ticket' && preg_match('/^(\d+)x\s+(Random\s+)?([★]+)\s+Claim Ticket/i', trim($displayName), $matches)) {
                         $itemIsParsedTicket = true;
                         $itemTicketAmount = $matches[1];
-                        $itemTicketRandom = !empty(trim($matches[2] ?? ''));
                         $itemTicketStars = $matches[3];
                         $displayName = "Claim Ticket";
                     }
@@ -297,19 +262,14 @@ x-effect="document.body.style.overflow = (showConfirmModal || showSearch || show
 
                     <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; font-size: 0.9rem;">
                         @if($itemIsParsedTicket)
-                            @if($itemTicketRandom)
-                                <div style="display: flex; align-items: center; gap: 0.4rem; color: #a855f7; margin-bottom: 0.3rem; font-weight: bold;">
-                                    <i class="ph-bold ph-dice-three"></i> Random Drop
-                                </div>
-                                <p style="margin: 0 0 0.8rem 0; font-size: 0.85rem; opacity: 0.8; color: var(--text-secondary);">Yields random cards from the pool.</p>
-                            @else
-                                <div style="display: flex; align-items: center; gap: 0.4rem; color: #34d399; margin-bottom: 0.3rem; font-weight: bold;">
-                                    <i class="ph-bold ph-hand-pointing"></i> Select Card
-                                </div>
-                                <p style="margin: 0 0 0.8rem 0; font-size: 0.85rem; opacity: 0.8; color: var(--text-secondary);">Pick specific cards from the pool.</p>
-                            @endif
+                            <div style="display: flex; align-items: center; gap: 0.4rem; color: #a855f7; margin-bottom: 0.3rem; font-weight: bold;">
+                                <i class="ph-bold ph-dice-three"></i> Random Drop
+                            </div>
+                            <p style="margin: 0 0 0.8rem 0; font-size: 0.85rem; opacity: 0.8; color: var(--text-secondary);">
+                                {{ $item->collectionID ? 'Yields random cards, all from the collection below.' : 'Yields random cards from randomly chosen collections.' }}
+                            </p>
                         @endif
-                        
+
                         @if($storeItem && isset($storeItem['single']) && $storeItem['single'])
                             <div style="display: flex; align-items: center; gap: 0.4rem; color: #fbbf24; margin-bottom: 0.8rem;" title="This item is bound to a single randomly selected collection.">
                                 <i class="ph-bold ph-cards"></i> Single Collection
@@ -372,14 +332,6 @@ x-effect="document.body.style.overflow = (showConfirmModal || showSearch || show
             </div>
         </div>
     </div>
-
-    @if($showCardSearch)
-        <livewire:card-search 
-            :ticketStars="$ticketStars" 
-            :ticketAmount="$ticketAmount" 
-            :ticketCollection="$ticketCollection" 
-        />
-    @endif
 </div>
 
 <script>
