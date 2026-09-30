@@ -19,19 +19,7 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
     #[On('close-reveal')]
     public function closeCardReveal()
     {
-        $this->addCardsToInventory($this->revealedCards);
         $this->showCardReveal = false;
-    }
-
-    public function addCardsToInventory($cardIds)
-    {
-        $user = auth()->user();
-        \Illuminate\Support\Facades\Http::withHeaders([
-            'Authorization' => env('AMUSE_API_KEY')
-        ])->timeout(5)->put(env('AMUSE_API_ROOT') . '/user/cards?user=' . $user->userID, [
-            'cards' => $cardIds
-        ]);
-        // Deprecated raw DB writes for usercards in favor of API route
     }
 
     public function confirmUseItem($itemId = null)
@@ -45,92 +33,20 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
             $this->selectedItemId = $itemId;
         }
 
-        $user = auth()->user();
-        $item = UserInventory::where('userID', $user->userID)
-            ->get()
-            ->firstWhere('id', $this->selectedItemId);
-
-        if (!$item) {
-            $this->dispatch('log-to-console', ['message' => 'Item not found or not owned by user.']);
-            return;
-        }
-
-        if ($item->type !== 'ticket') {
-            $this->dispatch('log-to-console', ['message' => 'Item is not a ticket.']);
-            return;
-        }
-
-        $cardIDs = $this->drawTicketCards($item);
-        if (empty($cardIDs)) {
-            $this->dispatch('notify', message: 'No cards are available for this ticket.', type: 'error');
-            return;
-        }
-
+        // The bot draws the cards, consumes the item and credits the cards
         $response = \Illuminate\Support\Facades\Http::withHeaders([
             'Authorization' => env('AMUSE_API_KEY')
-        ])->timeout(5)->delete(env('AMUSE_API_ROOT') . '/user/inventory?user=' . $user->userID, [
-            'id' => $item->id
+        ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/inventory/use?user=' . auth()->user()->userID, [
+            'id' => $this->selectedItemId
         ]);
+
         if (!$response->successful()) {
-            $this->dispatch('notify', message: 'Could not use this ticket, please try again.', type: 'error');
+            $this->dispatch('notify', message: $response->body() ?: 'Could not use this item, please try again.', type: 'error');
             return;
         }
 
-        $this->revealedCards = $cardIDs;
+        $this->revealedCards = $response->json('cards', []);
         $this->showCardReveal = true;
-    }
-
-    /**
-     * Mirrors ticketRedemption() in the bot (bots/amusement/helpers/tickets.js).
-     * The itemID encodes the ticket: ticket<amount>x<stars>[s|r].
-     * A ticket bound to a collection (rolled at purchase) draws every card from
-     * that collection; an unbound ticket rolls a new collection for each card.
-     * Cards are drawn with replacement, so duplicates are possible.
-     */
-    private function drawTicketCards($item): array
-    {
-        if (!preg_match('/^ticket(\d+)x(\d)/', $item->itemID ?? '', $matches)) {
-            $this->dispatch('log-to-console', ['message' => 'Could not parse ticket ID.']);
-            return [];
-        }
-        $amount = (int) $matches[1];
-        $stars = (int) $matches[2];
-
-        $pool = \App\Models\Card::where('rarity', $stars)
-            ->where('canDrop', true)
-            ->get(['cardID', 'collectionID'])
-            ->groupBy('collectionID');
-
-        // Collections missing the field default to inClaimPool = true in the bot's schema
-        $claimCols = BotCollection::all()
-            ->filter(fn ($col) => $col->inClaimPool ?? true)
-            ->pluck('collectionID')
-            ->filter(fn ($id) => $pool->has($id))
-            ->values();
-
-        if ($stars === 4) {
-            $collectionID = 'special';
-        } else if (!empty($item->collectionID)) {
-            $collectionID = $item->collectionID;
-        } else {
-            $storeItem = $this->storeItems()[$item->itemID] ?? null;
-            // Single tickets given before the purchase-time roll existed have no
-            // collection yet, so roll it now and keep every card in it
-            $collectionID = !empty($storeItem['single']) && $claimCols->isNotEmpty()
-                ? $claimCols->random()
-                : null;
-        }
-
-        if ($collectionID !== null ? !$pool->has($collectionID) : $claimCols->isEmpty()) {
-            return [];
-        }
-
-        $cardIDs = [];
-        for ($i = 0; $i < $amount; $i++) {
-            $colID = $collectionID ?? $claimCols->random();
-            $cardIDs[] = $pool[$colID]->random()->cardID;
-        }
-        return $cardIDs;
     }
 
     private function storeItems(): array

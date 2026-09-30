@@ -338,6 +338,37 @@ DELETE /user/inventory?user=<USER_ID>
 |400|Missing item id|
 |404|Item not found|
 
+## Use Inventory Item
+
+```
+POST /user/inventory/use?user=<USER_ID>
+```
+
+Uses an item from the user's inventory. Only claim tickets are supported. The bot draws the ticket's cards with the same logic as the Discord ticket menu, removes the ticket and adds the cards to the user's collection.
+
+Tickets bound to a collection (single tickets roll one on purchase) draw every card from it; other tickets roll a claim-pool collection per card. Cards are drawn with replacement, so a card can appear more than once.
+
+### Body
+```json
+{
+  "id": "<GENERATED_ITEM_ID>"
+}
+```
+
+### Response
+```json
+{
+  "cards": [1234, 5678, 1234]
+}
+```
+
+| Status | Description |
+|---------|-------------|
+|200|Item used, drawn card IDs returned|
+|400|Missing item id, or item type cannot be used|
+|404|Item not found (or already used)|
+|422|No cards available for this ticket|
+
 ---
 
 # User Cards
@@ -464,6 +495,7 @@ The following endpoints were added to fully decouple the dashboard from direct d
 | PATCH | `/user/hero` | Set user's active hero |
 | POST | `/user/plots/collect` | Collect lemons from guild plots |
 | POST | `/user/store/purchase` | Purchase store item (atomic deduct + inventory + stats) |
+| POST | `/user/inventory/use` | Use an inventory item (ticket draw + item removal + cards added) |
 | POST | `/user/claim` | Claim cards (atomic pricing + drawing + stats + claim record) |
 | POST | `/user/admin/balances` | Admin: set user balances |
 | PUT | `/user/admin/card` | Admin: give card to user |
