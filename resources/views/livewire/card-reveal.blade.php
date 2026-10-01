@@ -408,6 +408,7 @@ new class extends Component {
                                 
                                 <img src="{{ $card->cardURL }}" 
                                      alt="{{ $card->displayName }}" 
+                                     x-init="if ($el.complete) imgStatus = $el.naturalWidth ? 'loaded' : 'error'"
                                      x-on:load="imgStatus = 'loaded'" 
                                      x-on:error="imgStatus = 'error'"
                                      x-show="imgStatus === 'loaded'"

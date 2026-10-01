@@ -467,6 +467,7 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
                     <div style="width: 100%; display: flex; justify-content: center; align-items: center; min-height: 300px;">
                         <img src="{{ $selectedCard->cardURL }}" 
                              alt="{{ $selectedCard->displayName ?? $selectedCard->cardName }}" 
+                             x-init="if ($el.complete) imgStatus = $el.naturalWidth ? 'loaded' : 'error'"
                              x-on:load="imgStatus = 'loaded'" 
                              x-on:error="imgStatus = 'error'"
                              x-show="imgStatus === 'loaded'"

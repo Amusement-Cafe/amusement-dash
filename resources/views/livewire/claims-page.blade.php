@@ -460,6 +460,7 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
                                     
                                     <img src="{{ $c['cardURL'] }}" 
                                          alt="Card" 
+                                         x-init="if ($el.complete) imgStatus = $el.naturalWidth ? 'loaded' : 'error'"
                                          x-on:load="imgStatus = 'loaded'" 
                                          x-on:error="imgStatus = 'error'"
                                          x-show="imgStatus === 'loaded'"

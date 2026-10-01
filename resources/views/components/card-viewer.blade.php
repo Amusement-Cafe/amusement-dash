@@ -58,7 +58,8 @@
             
             <img src="{{ $card->cardURL }}" 
                  alt="{{ $card->displayName ?? $card->cardName }}" 
-                 x-on:load="imgStatus = 'loaded'" 
+                 x-init="if ($el.complete) imgStatus = $el.naturalWidth ? 'loaded' : 'error'"
+                 x-on:load="imgStatus = 'loaded'"
                  x-on:error="imgStatus = 'error'"
                  x-show="imgStatus === 'loaded'"
                  style="max-width: 100%; max-height: 100%; object-fit: contain;">
