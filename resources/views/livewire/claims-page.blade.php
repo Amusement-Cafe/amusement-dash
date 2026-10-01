@@ -213,6 +213,10 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
     public function doClaim()
     {
         if (!auth()->check()) return;
+        if (!\App\Models\PageToggle::isEnabled('claiming')) {
+            $this->dispatch('notify', message: 'Claiming is currently unavailable on the dashboard.', type: 'error');
+            return;
+        }
         if (!auth()->user()->canWrite()) {
             $this->dispatch('notify', message: 'You need AmuPlus to perform this action.', type: 'error');
             return;
@@ -243,6 +247,11 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
     public function with(): array
     {
         $user = auth()->user();
+
+        // With claiming off only the history tab exists, whatever ?tab= says.
+        if (!\App\Models\PageToggle::isEnabled('claiming')) {
+            $this->tab = 'history';
+        }
 
         $claims = Claim::where('userID', $user->userID)
             ->orderBy('timeClaimed', 'desc')
@@ -371,9 +380,11 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
     </style>
 
     <div style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid var(--glass-border);">
+        @if(\App\Models\PageToggle::isEnabled('claiming'))
         <div class="claim-tab {{ $tab === 'claim' ? 'active' : '' }}" wire:click="$set('tab', 'claim')">
             <i class="ph-bold ph-cards"></i> New Claim
         </div>
+        @endif
         <div class="claim-tab {{ $tab === 'history' ? 'active' : '' }}" wire:click="$set('tab', 'history')">
             <i class="ph-bold ph-clock-counter-clockwise"></i> Claim History
         </div>
@@ -385,6 +396,7 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
         </div>
     @endif
 
+    @if(\App\Models\PageToggle::isEnabled('claiming'))
     <div x-show="$wire.tab === 'claim'" style="animation: fadeIn 0.3s ease-out;">
         <h2 style="font-size: 2rem; margin-bottom: 0rem;">Select a Banner</h2>
         <div style="display: flex; gap: 2rem; overflow-x: auto; padding: 2rem 1rem; margin: 0 -1rem 1rem -1rem;">
@@ -511,6 +523,7 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
             </div>
         </div>
     </div>
+    @endif
 
     <!-- History Tab -->
     <div x-show="$wire.tab === 'history'" style="display: none; animation: fadeIn 0.3s ease-out;" :style="$wire.tab === 'history' ? 'display: block;' : 'display: none;'">

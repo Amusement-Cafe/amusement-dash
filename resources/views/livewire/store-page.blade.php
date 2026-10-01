@@ -33,6 +33,8 @@ new class extends Component {
     }
     
     public function purchase($itemID) {
+        abort_unless(\App\Models\PageToggle::isEnabled('store'), 403);
+
         if (!auth()->check()) {
             $this->dispatch('notify', message: "You must be signed in to purchase items.");
             return;

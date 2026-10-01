@@ -93,11 +93,19 @@
                 <a href="/" class="nav-link"><i class="ph-bold ph-house" style="font-size: 1.1rem; color: #a855f7;"></i> Home</a>
                 <a href="{{ route('cards.index') }}" class="nav-link"><i class="ph-bold ph-cards" style="font-size: 1.1rem; color: #60a5fa;"></i> Cards</a>
                 <a href="{{ route('collections.index') }}" class="nav-link"><i class="ph-bold ph-books" style="font-size: 1.1rem; color: #34d399;"></i> Collections</a>
-                <a href="{{ route('auctions.index') }}" class="nav-link"><i class="ph-bold ph-gavel" style="font-size: 1.1rem; color: #fbbf24;"></i> Auctions</a>
-                <a href="{{ route('store.index') }}" class="nav-link"><i class="ph-bold ph-storefront" style="font-size: 1.1rem; color: #f43f5e;"></i> Store</a>
-                <a href="{{ route('leaderboards.index') }}" class="nav-link"><i class="ph-bold ph-trophy" style="font-size: 1.1rem; color: #eab308;"></i> Leaderboards</a>
+                @if(\App\Models\PageToggle::isEnabled('auctions'))
+                    <a href="{{ route('auctions.index') }}" class="nav-link"><i class="ph-bold ph-gavel" style="font-size: 1.1rem; color: #fbbf24;"></i> Auctions</a>
+                @endif
+                @if(\App\Models\PageToggle::isEnabled('store'))
+                    <a href="{{ route('store.index') }}" class="nav-link"><i class="ph-bold ph-storefront" style="font-size: 1.1rem; color: #f43f5e;"></i> Store</a>
+                @endif
+                @if(\App\Models\PageToggle::isEnabled('leaderboards'))
+                    <a href="{{ route('leaderboards.index') }}" class="nav-link"><i class="ph-bold ph-trophy" style="font-size: 1.1rem; color: #eab308;"></i> Leaderboards</a>
+                @endif
                 @auth
-                    <a href="{{ route('heroes.index') }}" class="nav-link"><i class="ph-bold ph-mask-happy" style="font-size: 1.1rem; color: #ec4899;"></i> Heroes</a>
+                    @if(\App\Models\PageToggle::isEnabled('heroes'))
+                        <a href="{{ route('heroes.index') }}" class="nav-link"><i class="ph-bold ph-mask-happy" style="font-size: 1.1rem; color: #ec4899;"></i> Heroes</a>
+                    @endif
                     <div x-data="{ open: false }" style="position: relative;">
                         <button @click="open = !open" @click.away="open = false" style="background: transparent; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.5rem; border-radius: 20px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                             <img src="{{ $avatarUrl }}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-solid);">
@@ -132,9 +140,11 @@
                                 <i class="ph-fill ph-hand-coins" style="color: #10b981; font-size: 1.2rem;"></i> Claims
                             </a>
                             
+                            @if(\App\Models\PageToggle::isEnabled('plots'))
                             <a href="{{ route('plots.index') }}" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1rem; color: white; text-decoration: none; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 <i class="ph-fill ph-house-line" style="color: #eab308; font-size: 1.2rem;"></i> Plots
                             </a>
+                            @endif
                             
                             <a href="{{ route('preferences.index') }}" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1rem; color: white; text-decoration: none; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 <i class="ph-fill ph-gear" style="color: #a855f7; font-size: 1.2rem;"></i> Preferences
@@ -166,11 +176,19 @@
                 <a href="/" class="nav-link"><i class="ph-bold ph-house" style="font-size: 1.1rem; color: #a855f7;"></i> Home</a>
                 <a href="{{ route('cards.index') }}" class="nav-link"><i class="ph-bold ph-cards" style="font-size: 1.1rem; color: #60a5fa;"></i> Cards</a>
                 <a href="{{ route('collections.index') }}" class="nav-link"><i class="ph-bold ph-books" style="font-size: 1.1rem; color: #34d399;"></i> Collections</a>
-                <a href="{{ route('auctions.index') }}" class="nav-link"><i class="ph-bold ph-gavel" style="font-size: 1.1rem; color: #fbbf24;"></i> Auctions</a>
-                <a href="{{ route('store.index') }}" class="nav-link"><i class="ph-bold ph-storefront" style="font-size: 1.1rem; color: #f43f5e;"></i> Store</a>
-                <a href="{{ route('leaderboards.index') }}" class="nav-link"><i class="ph-bold ph-trophy" style="font-size: 1.1rem; color: #eab308;"></i> Leaderboards</a>
+                @if(\App\Models\PageToggle::isEnabled('auctions'))
+                    <a href="{{ route('auctions.index') }}" class="nav-link"><i class="ph-bold ph-gavel" style="font-size: 1.1rem; color: #fbbf24;"></i> Auctions</a>
+                @endif
+                @if(\App\Models\PageToggle::isEnabled('store'))
+                    <a href="{{ route('store.index') }}" class="nav-link"><i class="ph-bold ph-storefront" style="font-size: 1.1rem; color: #f43f5e;"></i> Store</a>
+                @endif
+                @if(\App\Models\PageToggle::isEnabled('leaderboards'))
+                    <a href="{{ route('leaderboards.index') }}" class="nav-link"><i class="ph-bold ph-trophy" style="font-size: 1.1rem; color: #eab308;"></i> Leaderboards</a>
+                @endif
                 @auth
-                    <a href="{{ route('heroes.index') }}" class="nav-link"><i class="ph-bold ph-mask-happy" style="font-size: 1.1rem; color: #ec4899;"></i> Heroes</a>
+                    @if(\App\Models\PageToggle::isEnabled('heroes'))
+                        <a href="{{ route('heroes.index') }}" class="nav-link"><i class="ph-bold ph-mask-happy" style="font-size: 1.1rem; color: #ec4899;"></i> Heroes</a>
+                    @endif
                     
                     <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0.5rem 0;"></div>
                     <div style="padding: 0.5rem 1rem; color: var(--text-secondary); font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">{{ $user->username }}'s Account</div>
@@ -200,9 +218,11 @@
                         <i class="ph-fill ph-hand-coins" style="color: #10b981; font-size: 1.2rem;"></i> Claims
                     </a>
                     
+                    @if(\App\Models\PageToggle::isEnabled('plots'))
                     <a href="{{ route('plots.index') }}" class="nav-link">
                         <i class="ph-fill ph-house-line" style="color: #eab308; font-size: 1.2rem;"></i> Plots
                     </a>
+                    @endif
                     
                     <a href="{{ route('preferences.index') }}" class="nav-link">
                         <i class="ph-fill ph-gear" style="color: #a855f7; font-size: 1.2rem;"></i> Preferences

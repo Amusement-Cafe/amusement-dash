@@ -251,6 +251,7 @@ new #[Layout('layouts.app')] class extends Component
                 </div>
             </a>
             
+            @if(\App\Models\PageToggle::isEnabled('claiming'))
             <!-- Claim Cards -->
             <a href="/claims" class="glass-panel" style="flex: 1 1 250px; padding: 1.5rem; display: flex; align-items: center; gap: 1rem; border-left: 4px solid #f43f5e; text-decoration: none; color: inherit; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='translateY(0)';">
                 <i class="ph-fill ph-cards" style="font-size: 3.5rem; color: #f43f5e;"></i>
@@ -261,6 +262,7 @@ new #[Layout('layouts.app')] class extends Component
                     </p>
                 </div>
             </a>
+            @endif
         </div>
 
         <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2rem;">
@@ -460,6 +462,7 @@ new #[Layout('layouts.app')] class extends Component
             <!-- Right Column -->
             <div style="flex: 1 1 350px; display: flex; flex-direction: column;">
 
+            @if(\App\Models\PageToggle::isEnabled('plots'))
             <!-- Plots -->
             @php
                 $totalLemons = 0;
@@ -493,6 +496,7 @@ new #[Layout('layouts.app')] class extends Component
                     @endif
                 </div>
             </a>
+            @endif
 
             <!-- Transactions -->
             <div class="glass-panel" style="break-inside: avoid; margin-bottom: 1.5rem; padding: 1.5rem; opacity: 0.8;">

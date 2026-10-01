@@ -124,6 +124,8 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
 
     public function placeBid()
     {
+        abort_unless(\App\Models\PageToggle::isEnabled('auctions'), 403);
+
         if (!auth()->check() || !$this->selectedAuctionId) return;
         if (!auth()->user()->canWrite()) {
             $this->dispatch('notify', message: 'You need AmuPlus to perform this action.', type: 'error');

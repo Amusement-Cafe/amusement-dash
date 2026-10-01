@@ -24,6 +24,12 @@ class AppServiceProvider extends ServiceProvider
             [\SocialiteProviders\Discord\DiscordExtendSocialite::class, 'handle']
         );
 
+        // Re-check page toggles on Livewire actions too, so a page turned off
+        // while someone has it open stops accepting requests (e.g. plot collect).
+        \Livewire\Livewire::addPersistentMiddleware([
+            \App\Http\Middleware\EnsurePageEnabled::class,
+        ]);
+
         \Illuminate\Support\Facades\View::composer('layouts.app', function ($view) {
             $apiIsDown = \Illuminate\Support\Facades\Cache::remember('api_is_down', 5, function () {
                 try {

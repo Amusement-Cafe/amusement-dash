@@ -377,6 +377,7 @@
                                 </div>
                             </template>
                             
+                            @if(\App\Models\PageToggle::isEnabled('auctions'))
                             <template x-if="(!selectedCard || selectedCard?.userCopies <= 0) && selectedCard?.auctionPrice">
                                 <div style="display: flex; gap: 1rem; width: 100%;">
                                     <a href="/auctions" 
@@ -386,6 +387,7 @@
                                     </a>
                                 </div>
                             </template>
+                            @endif
                         @else
                             <div style="width: 100%; padding: 1rem; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(10px); border: 1px dashed var(--glass-border); border-radius: 12px; text-align: center; color: var(--text-secondary); box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">
                                 <a href="{{ route('login.discord') }}" style="color: var(--accent-solid); text-decoration: none; font-weight: bold;">Sign in</a> for more actions like favorite and wishlist.

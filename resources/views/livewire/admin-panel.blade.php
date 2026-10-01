@@ -9,6 +9,7 @@ use App\Models\Claim;
 use App\Models\UserCard;
 use App\Models\UserInventory;
 use App\Models\Card;
+use App\Models\PageToggle;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\WithPagination;
@@ -126,6 +127,13 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
         $this->successMessage = $response->successful() ? "Daily streak reset! User can claim daily again." : "Failed: " . $response->body();
     }
 
+    public function togglePage(string $page)
+    {
+        PageToggle::setEnabled($page, !PageToggle::isEnabled($page));
+        $label = array_key_exists($page, PageToggle::PAGES) ? PageToggle::PAGES[$page] . ' page' : PageToggle::FEATURES[$page];
+        $this->dispatch('notify', message: $label . (PageToggle::isEnabled($page) ? ' enabled.' : ' disabled.'));
+    }
+
     public function with(): array
     {
         $targetUser = null;
@@ -232,7 +240,8 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
             'userMap' => $userMap,
             'graphData' => $graphData,
             'minDate' => $minDate,
-            'maxDate' => $maxDate
+            'maxDate' => $maxDate,
+            'pageStates' => collect(PageToggle::toggles())->map(fn ($label, $page) => PageToggle::isEnabled($page))->all(),
         ];
     }
 };
@@ -240,13 +249,52 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
 
 <div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem;">
-        <h1 style="font-size: 2rem; margin-bottom: 1rem; color: #f87171; display: flex; align-items: center; gap: 0.5rem;">
-            <i class="ph-fill ph-shield-check"></i> Admin Panel
-        </h1>
+    <h1 style="font-size: 2rem; margin: 0 0 1.5rem 0; color: #f87171; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="ph-fill ph-shield-check"></i> Admin Panel
+    </h1>
 
-        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-            <input type="text" wire:model="searchUser" wire:keydown.enter="loadUser" placeholder="Enter User ID or Username" class="form-input" style="flex: 1; max-width: 400px; padding: 0.8rem; border-radius: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: white;">
+    <div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem;">
+        <h2 style="margin: 0 0 0.5rem 0; font-size: 1.3rem; display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-toggle-right" style="color: #34d399;"></i> Page Availability</h2>
+        <p style="margin: 0 0 1.5rem 0; color: var(--text-secondary);">Disabled pages are hidden from navigation and return 403 for everyone, admins included.</p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem;">
+            @foreach(\App\Models\PageToggle::PAGES as $page => $label)
+                @php $enabled = $pageStates[$page]; @endphp
+                <div style="background: rgba(0,0,0,0.2); padding: 1rem 1.25rem; border-radius: 12px; border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-width: 0;">
+                    <div style="min-width: 0;">
+                        <div style="font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ $label }}</div>
+                        <div style="font-size: 0.85rem; color: {{ $enabled ? '#4ade80' : '#f87171' }};">{{ $enabled ? 'Enabled' : 'Disabled' }}</div>
+                    </div>
+                    <button wire:click="togglePage('{{ $page }}')" wire:loading.attr="disabled" class="btn" style="flex-shrink: 0; background: {{ $enabled ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)' }}; border: 1px solid {{ $enabled ? '#ef4444' : '#22c55e' }}; color: white; padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                        {{ $enabled ? 'Disable' : 'Enable' }}
+                    </button>
+                </div>
+            @endforeach
+        </div>
+
+        <h3 style="margin: 2rem 0 0.5rem 0; font-size: 1.1rem;">Features</h3>
+        <p style="margin: 0 0 1rem 0; color: var(--text-secondary);">Turns off an action on the dashboard only, while its page stays open. Discord commands are unaffected.</p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem;">
+            @foreach(\App\Models\PageToggle::FEATURES as $page => $label)
+                @php $enabled = $pageStates[$page]; @endphp
+                <div style="background: rgba(0,0,0,0.2); padding: 1rem 1.25rem; border-radius: 12px; border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-width: 0;">
+                    <div style="min-width: 0;">
+                        <div style="font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ $label }}</div>
+                        <div style="font-size: 0.85rem; color: {{ $enabled ? '#4ade80' : '#f87171' }};">{{ $enabled ? 'Enabled' : 'Disabled' }}</div>
+                    </div>
+                    <button wire:click="togglePage('{{ $page }}')" wire:loading.attr="disabled" class="btn" style="flex-shrink: 0; background: {{ $enabled ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)' }}; border: 1px solid {{ $enabled ? '#ef4444' : '#22c55e' }}; color: white; padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                        {{ $enabled ? 'Disable' : 'Enable' }}
+                    </button>
+                </div>
+            @endforeach
+        </div>
+    </div>
+
+    <div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem;">
+        <h2 style="margin: 0 0 0.5rem 0; font-size: 1.3rem; display: flex; align-items: center; gap: 0.5rem;"><i class="ph-fill ph-user-gear" style="color: var(--accent-solid);"></i> User Management</h2>
+        <p style="margin: 0 0 1.5rem 0; color: var(--text-secondary);">Look up a user to edit their balances, give cards or items, reset their daily, or audit their activity.</p>
+
+        <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+            <input type="text" wire:model="searchUser" wire:keydown.enter="loadUser" placeholder="Enter User ID or Username" class="form-input" style="flex: 1; min-width: 0; max-width: 400px; padding: 0.8rem; border-radius: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: white;">
             <button wire:click="loadUser" class="btn btn-primary" style="background: var(--accent-solid); color: white; padding: 0.8rem 1.5rem; border-radius: 8px; font-weight: bold; border: none; cursor: pointer;">Search</button>
         </div>
 

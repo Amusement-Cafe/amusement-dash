@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Auth;
 
 new #[Layout('layouts.app')] class extends Component {
     public function collectAll($guildID) {
+        abort_unless(\App\Models\PageToggle::isEnabled('plots'), 403);
+
         if (!Auth::user()->canWrite()) {
             $this->dispatch('notify', message: 'You need AmuPlus to perform this action.', type: 'error');
             return;
