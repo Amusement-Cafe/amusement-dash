@@ -14,6 +14,7 @@
     ]
 ])
 
+{{-- z-index 50: above the card grid (whose overlays go up to 30) so dropdowns aren't hidden, below the sticky navbar (100). --}}
 <div x-data="{ 
     open: false,
     tagSearch: '',
@@ -71,7 +72,7 @@
         this.showSuggestions = true;
     },
     allTags: {{ Illuminate\Support\Js::from($allTags) }}
-}" class="glass-panel" style="margin-bottom: 2rem; width: 100%; position: relative; z-index: 100;">
+}" class="glass-panel" style="margin-bottom: 2rem; width: 100%; position: relative; z-index: 50;">
     <!-- Header / Toggle -->
     <div @click="open = !open" style="padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; border-bottom: 1px solid transparent; transition: border-color 0.3s;" :style="{ borderBottomColor: open ? 'rgba(255,255,255,0.05)' : 'transparent' }">
         <h3 style="margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-primary);">
