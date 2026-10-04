@@ -132,6 +132,12 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
             return;
         }
 
+        $auction = Auction::where('auctionID', $this->selectedAuctionId)->first();
+        if ($auction && $auction->userID === auth()->user()->userID) {
+            $this->dispatch('notify', message: 'You cannot bid on your own auction.', type: 'error');
+            return;
+        }
+
         $response = \Illuminate\Support\Facades\Http::withHeaders([
             'Authorization' => env('AMUSE_API_KEY')
         ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/auction/bid?user=' . auth()->user()->userID, [
@@ -562,11 +568,18 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
 
                 @auth
                     @php
+                        $isOwnAuction = $selectedAuction->userID === auth()->user()->userID;
                         $isWinning = $selectedAuction->lastBidderID === auth()->user()->userID;
                         $hasBalance = auth()->user()->tomatoes >= ($selectedAuction->price + 1);
                     @endphp
                     
-                    @if($isWinning)
+                    @if($isOwnAuction)
+                        <div class="glass-panel" style="padding: 1.5rem; text-align: center; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2);">
+                            <i class="ph-bold ph-storefront" style="color: var(--text-secondary); font-size: 2.5rem; margin-bottom: 0.5rem; display: block;"></i>
+                            <p style="font-weight: bold; font-size: 1.2rem;">This is your auction.</p>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem;">You cannot bid on your own auction.</p>
+                        </div>
+                    @elseif($isWinning)
                         <div class="glass-panel" style="padding: 1.5rem; text-align: center; border: 1px solid #10b981; background: rgba(16, 185, 129, 0.1);">
                             <i class="ph-fill ph-check-circle" style="color: #10b981; font-size: 2.5rem; margin-bottom: 0.5rem; display: block;"></i>
                             <p style="color: #10b981; font-weight: bold; font-size: 1.2rem;">You are the highest bidder!</p>
