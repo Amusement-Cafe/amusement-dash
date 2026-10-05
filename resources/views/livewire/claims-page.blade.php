@@ -224,8 +224,8 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
         $user = auth()->user();
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'Authorization' => env('AMUSE_API_KEY')
-        ])->timeout(10)->post(env('AMUSE_API_ROOT') . '/user/claim?user=' . $user->userID, [
+            'Authorization' => config('services.amuse.api_key')
+        ])->timeout(10)->post(config('services.amuse.api_root') . '/user/claim?user=' . $user->userID, [
             'bannerID' => $this->selectedBannerId,
             'amount' => $this->claimAmount,
         ]);
@@ -401,7 +401,7 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
         <h2 style="font-size: 2rem; margin-bottom: 0rem;">Select a Banner</h2>
         <div style="display: flex; gap: 2rem; overflow-x: auto; padding: 2rem 1rem; margin: 0 -1rem 1rem -1rem;">
             @foreach($this->banners as $banner)
-                <div class="banner-card {{ $selectedBannerId === $banner['id'] ? 'selected' : '' }}" wire:click="selectBanner('{{ $banner['id'] }}')">
+                <div class="banner-card {{ $selectedBannerId === $banner['id'] ? 'selected' : '' }}" wire:click="selectBanner({{ Js::from($banner['id']) }})">
                     @if($selectedBannerId === $banner['id'])
                         <div style="position: absolute; top: 1rem; right: 1rem; color: var(--accent-solid); font-size: 1.5rem;">
                             <i class="ph-fill ph-check-circle"></i>
@@ -542,7 +542,7 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
                                 @php
                                     $isSelected = $id == $tx->_id || $id == $tx->claimID;
                                 @endphp
-                                <div wire:click="selectClaim('{{ $tx->_id }}')" style="background: {{ $isSelected ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)' }}; border: 1px solid {{ $isSelected ? 'var(--accent-solid)' : 'transparent' }}; padding: 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='{{ $isSelected ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)' }}'">
+                                <div wire:click="selectClaim({{ Js::from($tx->_id) }})" style="background: {{ $isSelected ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)' }}; border: 1px solid {{ $isSelected ? 'var(--accent-solid)' : 'transparent' }}; padding: 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='{{ $isSelected ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)' }}'">
                                     <div style="display: flex; align-items: center; gap: 0.8rem;">
                                         <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
                                             <i class="ph-bold ph-hand-coins"></i>

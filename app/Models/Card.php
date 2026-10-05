@@ -32,7 +32,7 @@ class Card extends Model
     {
         $val = $this->attributes['cardURL'] ?? null;
         if ($val && str_starts_with($val, 'https://c.amu.cards')) {
-            $cardRoot = env('AMUSE_CARD_ROOT', 'https://c.amu.cards');
+            $cardRoot = config('services.amuse.card_root');
             return str_replace('https://c.amu.cards', $cardRoot, $val);
         }
         return $val;

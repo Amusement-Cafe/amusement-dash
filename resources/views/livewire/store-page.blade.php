@@ -17,8 +17,8 @@ new class extends Component {
     public function mount() {
         try {
             $response = Http::withHeaders([
-                'Authorization' => env('AMUSE_API_KEY')
-            ])->timeout(5)->get(env('AMUSE_API_ROOT') . '/global/items');
+                'Authorization' => config('services.amuse.api_key')
+            ])->timeout(5)->get(config('services.amuse.api_root') . '/global/items');
             
             if ($response->successful()) {
                 $this->items = $response->json();
@@ -45,8 +45,8 @@ new class extends Component {
         }
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'Authorization' => env('AMUSE_API_KEY')
-        ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/store/purchase?user=' . auth()->user()->userID, [
+            'Authorization' => config('services.amuse.api_key')
+        ])->timeout(5)->post(config('services.amuse.api_root') . '/user/store/purchase?user=' . auth()->user()->userID, [
             'itemID' => $itemID
         ]);
 
@@ -201,7 +201,7 @@ new class extends Component {
     <!-- Category Tabs -->
     <div class="category-tabs" style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 3rem;">
         @foreach($categories as $key => $cat)
-            <button wire:click="setCategory('{{ $key }}')" class="category-tab {{ $activeCategory === $key ? 'active' : '' }}">
+            <button wire:click="setCategory({{ Js::from($key) }})" class="category-tab {{ $activeCategory === $key ? 'active' : '' }}">
                 <i class="ph-fill {{ $cat['icon'] }}" style="font-size: 1.2rem; color: {{ $cat['color'] }};"></i>
                 {{ $cat['title'] }}
             </button>
@@ -291,7 +291,7 @@ new class extends Component {
                         </div>
                         
                         @if(auth()->user()?->canWrite())
-                            <button wire:click="purchase('{{ $itemID }}')" class="buy-btn" style="background: {{ $color }};">
+                            <button wire:click="purchase({{ Js::from($itemID) }})" class="buy-btn" style="background: {{ $color }};">
                                 Buy
                             </button>
                         @endif

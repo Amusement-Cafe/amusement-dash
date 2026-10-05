@@ -6,8 +6,8 @@ A feature-rich web dashboard for the Amusement Club 3.0 Discord bot, built with 
 Amusement Club is a Discord card trading bot using MongoDB as the primary datastore. The purpose of this dashboard is to provide a clean, visual interface for users to interact with their collections, track their progress, view trending cards, and manage their profile preferences outside of Discord.
 
 ## Tech Stack
-- **Backend Framework**: Laravel 11.x
-- **Frontend Framework**: Livewire 3 (Volt)
+- **Backend Framework**: Laravel 13
+- **Frontend Framework**: Livewire 4 (Volt)
 - **Database**: MongoDB (via `mongodb/laravel-mongodb`)
 - **Authentication**: Discord OAuth2 (via Laravel Socialite)
 - **Styling**: Vanilla CSS (Glassmorphism & Dark Mode theme)
@@ -16,7 +16,7 @@ Amusement Club is a Discord card trading bot using MongoDB as the primary datast
 
 ## Prerequisites
 Before you begin, ensure you have the following installed on your machine:
-- **PHP** 8.2 or higher (Must include `xml` and `mongodb` extensions. E.g., `sudo apt-get install php8.4-xml php8.4-mongodb`)
+- **PHP** 8.3 or higher (Must include `xml` and `mongodb` extensions. E.g., `sudo apt-get install php8.4-xml php8.4-mongodb`)
 - **Composer** (Dependency Manager for PHP)
 - **Node.js** & **npm** (for building frontend assets)
 - **MongoDB** (You need access to the existing Amusement Club `amuse3` database)
@@ -76,6 +76,15 @@ To enable user sign-ins, you must provide your Discord application credentials i
 DISCORD_CLIENT_ID=your_client_id_here
 DISCORD_CLIENT_SECRET=your_client_secret_here
 DISCORD_REDIRECT_URI=http://localhost:8000/auth/discord/callback
+DISCORD_BOT_TOKEN=your_bot_token_here   # used to look up avatars and guild names
+```
+
+### 7. Configure the Bot API
+The dashboard reads MongoDB directly but sends every write through the bot's Express API. Point it at a running bot and use the same key as the bot's `webhooks.auth` setting in `config.yaml`:
+```env
+AMUSE_API_ROOT="http://localhost:9898"
+AMUSE_API_KEY=same_value_as_webhooks_auth
+AMUSE_CARD_ROOT="http://localhost:9898"   # where card images are served from
 ```
 
 ---
@@ -115,6 +124,136 @@ cloudflared tunnel --url http://127.0.0.1:8000
 ```
 3. Cloudflare will output a public URL (e.g., `https://random-words.trycloudflare.com`). Share this link with your beta testers!
 *Note: If assets fail to load over the tunnel, restart your server with `php artisan serve --host=0.0.0.0` or temporarily update your `.env` `APP_URL` to the Cloudflare link.*
+
+---
+
+## Running in Production
+
+The steps below assume a single Linux server running **nginx + PHP-FPM**, with the bot's API and MongoDB reachable over a private network. The dashboard has no queue workers and no scheduled tasks, so nothing besides PHP-FPM needs to run.
+
+### 1. Server requirements
+- PHP 8.3+ with FPM and the `mongodb`, `xml`, `mbstring`, `curl` and `opcache` extensions
+- Composer, and Node.js (only needed at build time)
+- HTTPS in front of the site (Discord OAuth and secure cookies need it)
+- Network access to MongoDB (`amuse3`), the bot API (`AMUSE_API_ROOT`) and `discord.com`
+
+### 2. Get the code and build it
+```bash
+git clone <repository-url> /var/www/amusement-dash
+cd /var/www/amusement-dash
+
+composer install --no-dev --optimize-autoloader
+npm install
+npm run build          # outputs to public/build; node is not needed at runtime
+```
+
+### 3. Production `.env`
+Start from `.env.example` and change at least these values. **Never deploy with `APP_DEBUG=true`**: the error page shows environment values, including API keys and tokens.
+```env
+APP_NAME="Amusement Club"
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://your-domain.example
+
+LOG_LEVEL=warning
+
+DB_CONNECTION=mongodb
+DB_URI="mongodb://<host>:27017/amuse3"
+DB_DATABASE=amuse3
+
+# Keep the dashboard's own sessions and cache out of the shared amuse3 database.
+SESSION_DRIVER=file
+CACHE_STORE=file
+SESSION_SECURE_COOKIE=true
+
+DISCORD_CLIENT_ID=...
+DISCORD_CLIENT_SECRET=...
+DISCORD_REDIRECT_URI="${APP_URL}/auth/discord/callback"
+DISCORD_BOT_TOKEN=...
+
+AMUSE_API_ROOT="http://<bot-host>:<webhooks.port>"
+AMUSE_API_KEY=...      # same as webhooks.auth in the bot's config.yaml
+AMUSE_CARD_ROOT="https://c.amu.cards"
+```
+Then generate the app key once (keep it stable across deploys, or every session is invalidated):
+```bash
+php artisan key:generate
+```
+In the Discord Developer Portal, add the production callback URL (`https://your-domain.example/auth/discord/callback`) to the OAuth2 redirects.
+
+> **Do not run `php artisan migrate`.** The database belongs to the bot. The bundled migrations are Laravel defaults and are not needed.
+
+### 4. Permissions
+PHP-FPM must be able to write to `storage/` and `bootstrap/cache/`:
+```bash
+sudo chown -R www-data:www-data storage bootstrap/cache
+sudo chmod -R ug+rwX storage bootstrap/cache
+```
+
+### 5. Cache the framework
+```bash
+php artisan optimize   # caches config, routes, views and events
+```
+Once config is cached, `.env` is no longer read at runtime, so **re-run `php artisan optimize` after every `.env` change**. (Application code must read settings through `config()`, never `env()`, or the value is `null` here. API settings live under `services.amuse.*` in `config/services.php`.)
+
+### 6. nginx
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name your-domain.example;
+    root /var/www/amusement-dash/public;
+
+    # ssl_certificate / ssl_certificate_key ...
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+
+    index index.php;
+    charset utf-8;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+
+server {
+    listen 80;
+    server_name your-domain.example;
+    return 301 https://$host$request_uri;
+}
+```
+The app trusts `X-Forwarded-*` headers from any proxy (`bootstrap/app.php`). That is fine behind nginx or Cloudflare, but the PHP-FPM socket and any internal port must not be reachable from the internet directly.
+
+### 7. Check it
+- `https://your-domain.example/up` returns 200 when Laravel boots.
+- A red "API is currently unreachable" banner on every page means `AMUSE_API_ROOT` is wrong or the bot's API is down (it polls `<AMUSE_API_ROOT>/health`).
+- Errors go to `storage/logs/laravel.log`.
+
+### Deploying updates
+```bash
+cd /var/www/amusement-dash
+php artisan down
+git pull
+composer install --no-dev --optimize-autoloader
+npm install && npm run build
+php artisan optimize
+sudo systemctl reload php8.3-fpm     # clears OPcache so new code is picked up
+php artisan up
+```
+
+### Turning features off before launch
+Admins (users with the `admin` role in `amuse3.users`) can switch individual pages and claiming off from `/admin` without a deploy.
 
 ---
 

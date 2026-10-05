@@ -19,8 +19,8 @@ new #[Layout('layouts.app')] #[Title('Preferences')] class extends Component
     {
         $user = auth()->user();
         
-        $apiRoot = env('AMUSE_API_ROOT');
-        $apiKey = env('AMUSE_API_KEY');
+        $apiRoot = config('services.amuse.api_root');
+        $apiKey = config('services.amuse.api_key');
         
         // Fetch preferences from API instead of database
         $response = \Illuminate\Support\Facades\Http::withHeaders([
@@ -65,8 +65,8 @@ new #[Layout('layouts.app')] #[Title('Preferences')] class extends Component
         // Convert hex back to decimal string for the bot
         $this->prefs['profile']['color'] = (string)hexdec(ltrim($this->hexColor, '#'));
         
-        $apiRoot = env('AMUSE_API_ROOT');
-        $apiKey = env('AMUSE_API_KEY');
+        $apiRoot = config('services.amuse.api_root');
+        $apiKey = config('services.amuse.api_key');
         
         // PATCH to the API instead of writing to database
         $response = \Illuminate\Support\Facades\Http::withHeaders([

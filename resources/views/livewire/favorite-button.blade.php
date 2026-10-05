@@ -11,8 +11,8 @@ new class extends Component {
         $user = auth()->user();
         if ($user && $this->userCopies > 0) {
             \Illuminate\Support\Facades\Http::withHeaders([
-                'Authorization' => env('AMUSE_API_KEY')
-            ])->timeout(5)->patch(env('AMUSE_API_ROOT') . '/user/preferences?user=' . $user->userID, [
+                'Authorization' => config('services.amuse.api_key')
+            ])->timeout(5)->patch(config('services.amuse.api_root') . '/user/preferences?user=' . $user->userID, [
                 'preferences' => [
                     'profile' => [
                         'card' => (string)$this->cardId

@@ -119,7 +119,7 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
                                 $otherUser = $transactionUsers[$otherID] ?? null;
                                 $isSelected = $id == $tx->_id || $id == $tx->transactionID;
                             @endphp
-                            <div wire:click="selectTransaction('{{ $tx->_id }}')" style="background: {{ $isSelected ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)' }}; border: 1px solid {{ $isSelected ? 'var(--accent-solid)' : 'transparent' }}; padding: 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='{{ $isSelected ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)' }}'">
+                            <div wire:click="selectTransaction({{ Js::from($tx->_id) }})" style="background: {{ $isSelected ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)' }}; border: 1px solid {{ $isSelected ? 'var(--accent-solid)' : 'transparent' }}; padding: 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='{{ $isSelected ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)' }}'">
                                 <div style="display: flex; align-items: center; gap: 0.8rem;">
                                     <div style="width: 32px; height: 32px; border-radius: 50%; background: {{ $color }}20; color: {{ $color }}; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
                                         <i class="ph-bold {{ $icon }}"></i>
@@ -251,7 +251,7 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
                                         <a href="/profile?id={{ $selectedOtherUser->userID }}" style="color: white; text-decoration: none; font-weight: bold; font-size: 1.2rem; transition: color 0.2s;" onmouseover="this.style.color='var(--accent-solid)'" onmouseout="this.style.color='white'">
                                             {{ $selectedOtherUser->username }}
                                         </a>
-                                        <div style="color: var(--text-secondary); font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.2rem;" onclick="navigator.clipboard.writeText('{{ $selectedOtherUser->userID }}'); Livewire.dispatch('notify', { message: 'Copied ID to clipboard!' });" title="Click to copy">ID: {{ $selectedOtherUser->userID }} <i class="ph ph-copy"></i></div>
+                                        <div style="color: var(--text-secondary); font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.2rem;" onclick="navigator.clipboard.writeText({{ Js::from($selectedOtherUser->userID) }}); Livewire.dispatch('notify', { message: 'Copied ID to clipboard!' });" title="Click to copy">ID: {{ $selectedOtherUser->userID }} <i class="ph ph-copy"></i></div>
                                     </div>
                                 @elseif(strtolower($isIncoming ? $selectedTransaction->fromID : $selectedTransaction->toID) === 'bot')
                                     <div style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: var(--glass-border); flex-shrink: 0;">
@@ -270,7 +270,7 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
                                         @php
                                             $otherID = $isIncoming ? $selectedTransaction->fromID : $selectedTransaction->toID;
                                         @endphp
-                                        <div style="color: var(--text-secondary); font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.2rem;" onclick="navigator.clipboard.writeText('{{ $otherID }}'); Livewire.dispatch('notify', { message: 'Copied ID to clipboard!' });" title="Click to copy">ID: {{ $otherID }} <i class="ph ph-copy"></i></div>
+                                        <div style="color: var(--text-secondary); font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.2rem;" onclick="navigator.clipboard.writeText({{ Js::from($otherID) }}); Livewire.dispatch('notify', { message: 'Copied ID to clipboard!' });" title="Click to copy">ID: {{ $otherID }} <i class="ph ph-copy"></i></div>
                                     </div>
                                 @endif
                             </div>

@@ -48,8 +48,8 @@ new #[Layout('layouts.app')] #[Title('Heroes')] class extends Component {
         $user = Auth::user();
         if ($user) {
             \Illuminate\Support\Facades\Http::withHeaders([
-                'Authorization' => env('AMUSE_API_KEY')
-            ])->timeout(5)->patch(env('AMUSE_API_ROOT') . '/user/hero?user=' . $user->userID, [
+                'Authorization' => config('services.amuse.api_key')
+            ])->timeout(5)->patch(config('services.amuse.api_root') . '/user/hero?user=' . $user->userID, [
                 'heroID' => $id
             ]);
             

@@ -143,7 +143,7 @@ new #[Layout('layouts.app')] #[Title('Cards')] class extends Component
                 $defaultAvatar = "https://cdn.discordapp.com/embed/avatars/{$avatarIndex}.png";
                 
                 $ownerAvatar = Cache::remember('discord_avatar_' . $ownerUser->userID, 86400, function() use ($ownerUser, $defaultAvatar) {
-                    $botToken = env('DISCORD_BOT_TOKEN');
+                    $botToken = config('services.discord.bot_token');
                     if (!$botToken) return $defaultAvatar;
                     
                     $response = \Illuminate\Support\Facades\Http::withHeaders([

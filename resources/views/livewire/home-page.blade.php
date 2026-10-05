@@ -299,7 +299,7 @@ new #[Layout('layouts.app')] class extends Component
                                     $type = 'Promo Event';
                                 }
                             @endphp
-                            <div style="background: rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3); position: relative; cursor: pointer; transition: background 0.2s;" onclick="navigator.clipboard.writeText('{{ $cmd }}'); Livewire.dispatch('notify', { message: 'Copied command to clipboard!' });" onmouseover="this.style.background='rgba(139, 92, 246, 0.1)'" onmouseout="this.style.background='rgba(0,0,0,0.2)'">
+                            <div style="background: rgba(0,0,0,0.2); padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3); position: relative; cursor: pointer; transition: background 0.2s;" onclick="navigator.clipboard.writeText({{ Js::from($cmd) }}); Livewire.dispatch('notify', { message: 'Copied command to clipboard!' });" onmouseover="this.style.background='rgba(139, 92, 246, 0.1)'" onmouseout="this.style.background='rgba(0,0,0,0.2)'">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
                                     <div style="font-weight: bold; color: #c084fc; font-size: 1.05rem;">
                                         {{ $promo->promoName ?? 'Event' }}

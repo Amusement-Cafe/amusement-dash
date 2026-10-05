@@ -65,8 +65,8 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
         if (empty($this->targetUserId)) return;
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'Authorization' => env('AMUSE_API_KEY')
-        ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/admin/balances?user=' . auth()->user()->userID, [
+            'Authorization' => config('services.amuse.api_key')
+        ])->timeout(5)->post(config('services.amuse.api_root') . '/user/admin/balances?user=' . auth()->user()->userID, [
             'targetUserID' => $this->targetUserId,
             'tomatoes' => $this->editTomatoes,
             'lemons' => $this->editLemons,
@@ -87,8 +87,8 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
         }
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'Authorization' => env('AMUSE_API_KEY')
-        ])->timeout(5)->put(env('AMUSE_API_ROOT') . '/user/admin/card?user=' . auth()->user()->userID, [
+            'Authorization' => config('services.amuse.api_key')
+        ])->timeout(5)->put(config('services.amuse.api_root') . '/user/admin/card?user=' . auth()->user()->userID, [
             'targetUserID' => $this->targetUserId,
             'cardID' => (int) $this->giveCardId,
         ]);
@@ -102,8 +102,8 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
         if (empty($this->targetUserId) || empty($this->giveItemType) || empty($this->giveItemId)) return;
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'Authorization' => env('AMUSE_API_KEY')
-        ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/admin/item?user=' . auth()->user()->userID, [
+            'Authorization' => config('services.amuse.api_key')
+        ])->timeout(5)->post(config('services.amuse.api_root') . '/user/admin/item?user=' . auth()->user()->userID, [
             'targetUserID' => $this->targetUserId,
             'type' => $this->giveItemType,
             'itemID' => $this->giveItemId,
@@ -119,8 +119,8 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
         if (empty($this->targetUserId)) return;
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'Authorization' => env('AMUSE_API_KEY')
-        ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/admin/resetdaily?user=' . auth()->user()->userID, [
+            'Authorization' => config('services.amuse.api_key')
+        ])->timeout(5)->post(config('services.amuse.api_root') . '/user/admin/resetdaily?user=' . auth()->user()->userID, [
             'targetUserID' => $this->targetUserId,
         ]);
 
@@ -264,7 +264,7 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
                         <div style="font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ $label }}</div>
                         <div style="font-size: 0.85rem; color: {{ $enabled ? '#4ade80' : '#f87171' }};">{{ $enabled ? 'Enabled' : 'Disabled' }}</div>
                     </div>
-                    <button wire:click="togglePage('{{ $page }}')" wire:loading.attr="disabled" class="btn" style="flex-shrink: 0; background: {{ $enabled ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)' }}; border: 1px solid {{ $enabled ? '#ef4444' : '#22c55e' }}; color: white; padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                    <button wire:click="togglePage({{ Js::from($page) }})" wire:loading.attr="disabled" class="btn" style="flex-shrink: 0; background: {{ $enabled ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)' }}; border: 1px solid {{ $enabled ? '#ef4444' : '#22c55e' }}; color: white; padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; cursor: pointer;">
                         {{ $enabled ? 'Disable' : 'Enable' }}
                     </button>
                 </div>
@@ -281,7 +281,7 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
                         <div style="font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ $label }}</div>
                         <div style="font-size: 0.85rem; color: {{ $enabled ? '#4ade80' : '#f87171' }};">{{ $enabled ? 'Enabled' : 'Disabled' }}</div>
                     </div>
-                    <button wire:click="togglePage('{{ $page }}')" wire:loading.attr="disabled" class="btn" style="flex-shrink: 0; background: {{ $enabled ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)' }}; border: 1px solid {{ $enabled ? '#ef4444' : '#22c55e' }}; color: white; padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                    <button wire:click="togglePage({{ Js::from($page) }})" wire:loading.attr="disabled" class="btn" style="flex-shrink: 0; background: {{ $enabled ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)' }}; border: 1px solid {{ $enabled ? '#ef4444' : '#22c55e' }}; color: white; padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; cursor: pointer;">
                         {{ $enabled ? 'Disable' : 'Enable' }}
                     </button>
                 </div>

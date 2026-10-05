@@ -199,7 +199,7 @@ new #[Title('Leaderboards')] class extends Component {
     <!-- Tabs -->
     <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-bottom: 2rem; background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 16px; border: 1px solid var(--glass-border); backdrop-filter: blur(10px);">
         @foreach(['Cards', 'Clout', 'Completed', 'Lemons', 'Level', 'Tomatoes', 'Vials'] as $tab)
-            <button wire:click="setTab('{{ $tab }}')" 
+            <button wire:click="setTab({{ Js::from($tab) }})" 
                     style="background: {{ $activeTab === $tab ? 'rgba(255,255,255,0.1)' : 'transparent' }}; 
                            border: 1px solid {{ $activeTab === $tab ? 'rgba(255,255,255,0.2)' : 'transparent' }}; 
                            color: {{ $activeTab === $tab ? 'white' : 'var(--text-secondary)' }}; 

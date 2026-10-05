@@ -177,8 +177,8 @@ new #[Layout('layouts.app')] #[Title('Card Editor')] class extends Component
         $tagsToRemove = array_values(array_diff($this->originalTags, $this->editedTags));
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'Authorization' => env('AMUSE_API_KEY')
-        ])->timeout(10)->patch(env('AMUSE_API_ROOT') . '/user/cards/edit?user=' . auth()->user()->userID, [
+            'Authorization' => config('services.amuse.api_key')
+        ])->timeout(10)->patch(config('services.amuse.api_root') . '/user/cards/edit?user=' . auth()->user()->userID, [
             'cardID' => (int) $this->cardId,
             'displayName' => $this->editedData['displayName'],
             'meta' => empty($metaToSave) ? null : $metaToSave,
@@ -392,7 +392,7 @@ new #[Layout('layouts.app')] #[Title('Card Editor')] class extends Component
                     @foreach($tagsToAdd as $tag)
                         <div style="background: rgba(16, 185, 129, 0.2); border: 1px dashed #10b981; color: #10b981; padding: 0.3rem 0.8rem; border-radius: 9999px; font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem;">
                             <i class="ph-bold ph-plus"></i> {{ $tag }}
-                            <button wire:click="removeTag('{{ $tag }}')" style="background: none; border: none; color: inherit; cursor: pointer; padding: 0; display: flex; align-items: center;"><i class="ph-bold ph-x"></i></button>
+                            <button wire:click="removeTag({{ Js::from($tag) }})" style="background: none; border: none; color: inherit; cursor: pointer; padding: 0; display: flex; align-items: center;"><i class="ph-bold ph-x"></i></button>
                         </div>
                     @endforeach
 
@@ -400,7 +400,7 @@ new #[Layout('layouts.app')] #[Title('Card Editor')] class extends Component
                     @foreach($unchangedTags as $tag)
                         <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); padding: 0.3rem 0.8rem; border-radius: 9999px; font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem;">
                             {{ $tag }}
-                            <button wire:click="removeTag('{{ $tag }}')" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 0; display: flex; align-items: center;"><i class="ph-bold ph-x"></i></button>
+                            <button wire:click="removeTag({{ Js::from($tag) }})" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 0; display: flex; align-items: center;"><i class="ph-bold ph-x"></i></button>
                         </div>
                     @endforeach
 
@@ -408,7 +408,7 @@ new #[Layout('layouts.app')] #[Title('Card Editor')] class extends Component
                     @foreach($tagsToRemove as $tag)
                         <div style="background: rgba(239, 68, 68, 0.1); border: 1px dashed #ef4444; color: #ef4444; padding: 0.3rem 0.8rem; border-radius: 9999px; font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem; opacity: 0.7;">
                             <i class="ph-bold ph-minus"></i> {{ $tag }}
-                            <button wire:click="addTag('{{ $tag }}')" style="background: none; border: none; color: inherit; cursor: pointer; padding: 0; display: flex; align-items: center;" title="Undo Remove"><i class="ph-bold ph-arrow-counter-clockwise"></i></button>
+                            <button wire:click="addTag({{ Js::from($tag) }})" style="background: none; border: none; color: inherit; cursor: pointer; padding: 0; display: flex; align-items: center;" title="Undo Remove"><i class="ph-bold ph-arrow-counter-clockwise"></i></button>
                         </div>
                     @endforeach
                 </div>

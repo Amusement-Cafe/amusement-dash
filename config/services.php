@@ -42,4 +42,11 @@ return [
         'bot_token' => env('DISCORD_BOT_TOKEN'),
     ],
 
+    // The bot's Express API, the only path for writes to the shared database.
+    'amuse' => [
+        'api_root' => env('AMUSE_API_ROOT', 'http://127.0.0.1:2727'),
+        'api_key' => env('AMUSE_API_KEY'),
+        'card_root' => env('AMUSE_CARD_ROOT', 'https://c.amu.cards'),
+    ],
+
 ];

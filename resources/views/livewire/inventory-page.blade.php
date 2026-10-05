@@ -35,8 +35,8 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
 
         // The bot draws the cards, consumes the item and credits the cards
         $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'Authorization' => env('AMUSE_API_KEY')
-        ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/inventory/use?user=' . auth()->user()->userID, [
+            'Authorization' => config('services.amuse.api_key')
+        ])->timeout(5)->post(config('services.amuse.api_root') . '/user/inventory/use?user=' . auth()->user()->userID, [
             'id' => $this->selectedItemId
         ]);
 
@@ -53,8 +53,8 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
     {
         try {
             $response = \Illuminate\Support\Facades\Http::withHeaders([
-                'Authorization' => env('AMUSE_API_KEY')
-            ])->timeout(5)->get(env('AMUSE_API_ROOT') . '/global/items');
+                'Authorization' => config('services.amuse.api_key')
+            ])->timeout(5)->get(config('services.amuse.api_root') . '/global/items');
             if ($response->successful()) {
                 return $response->json();
             }
@@ -212,7 +212,7 @@ x-effect="document.body.style.overflow = (showConfirmModal || showReveal) ? 'hid
                     
                     <div class="item-action-overlay">
                         @if(auth()->user()?->canWrite())
-                            <button @click="selectedItemId = '{{ $item->id }}'; showConfirmModal = true;" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.8rem 2rem; box-shadow: 0 0 20px {{ $color }}60; border: 1px solid {{ $color }};">
+                            <button @click="selectedItemId = {{ Js::from($item->id) }}; showConfirmModal = true;" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.8rem 2rem; box-shadow: 0 0 20px {{ $color }}60; border: 1px solid {{ $color }};">
                                 <i class="ph-bold ph-magic-wand"></i> Use Item
                             </button>
                         @endif

@@ -216,7 +216,7 @@
                         @foreach($tags as $t)
                             <span style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #60a5fa; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
                                 #{{ $t }}
-                                <button type="button" wire:click="removeTag('{{ $t }}')" style="background: transparent; border: none; color: #60a5fa; cursor: pointer; padding: 0; display: flex; align-items: center;" title="Remove Tag">
+                                <button type="button" wire:click="removeTag({{ Js::from($t) }})" style="background: transparent; border: none; color: #60a5fa; cursor: pointer; padding: 0; display: flex; align-items: center;" title="Remove Tag">
                                     <i class="ph-bold ph-x"></i>
                                 </button>
                             </span>

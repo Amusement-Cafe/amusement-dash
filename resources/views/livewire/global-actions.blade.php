@@ -11,8 +11,8 @@ new class extends Component {
             $user = auth()->user();
 
             \Illuminate\Support\Facades\Http::withHeaders([
-                'Authorization' => env('AMUSE_API_KEY')
-            ])->timeout(5)->patch(env('AMUSE_API_ROOT') . '/user/preferences?user=' . $user->userID, [
+                'Authorization' => config('services.amuse.api_key')
+            ])->timeout(5)->patch(config('services.amuse.api_root') . '/user/preferences?user=' . $user->userID, [
                 'preferences' => [
                     'profile' => [
                         'card' => (string)$cardId
@@ -39,8 +39,8 @@ new class extends Component {
             }
             $user = auth()->user();
             $response = \Illuminate\Support\Facades\Http::withHeaders([
-                'Authorization' => env('AMUSE_API_KEY')
-            ])->timeout(5)->patch(env('AMUSE_API_ROOT') . '/user/cards/fav?user=' . $user->userID, [
+                'Authorization' => config('services.amuse.api_key')
+            ])->timeout(5)->patch(config('services.amuse.api_root') . '/user/cards/fav?user=' . $user->userID, [
                 'cardID' => (int)$cardId
             ]);
             
@@ -68,16 +68,16 @@ new class extends Component {
             
             if ($wishlist) {
                 \Illuminate\Support\Facades\Http::withHeaders([
-                    'Authorization' => env('AMUSE_API_KEY')
-                ])->timeout(5)->delete(env('AMUSE_API_ROOT') . '/user/wishlist?user=' . $user->userID, [
+                    'Authorization' => config('services.amuse.api_key')
+                ])->timeout(5)->delete(config('services.amuse.api_root') . '/user/wishlist?user=' . $user->userID, [
                     'cardID' => (string)$cardId
                 ]);
                 $this->dispatch('notify', message: 'Card removed from wishlist.');
                 $this->dispatch('card-updated', cardId: $cardId, type: 'wishlist', value: false);
             } else {
                 \Illuminate\Support\Facades\Http::withHeaders([
-                    'Authorization' => env('AMUSE_API_KEY')
-                ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/wishlist?user=' . $user->userID, [
+                    'Authorization' => config('services.amuse.api_key')
+                ])->timeout(5)->post(config('services.amuse.api_root') . '/user/wishlist?user=' . $user->userID, [
                     'cardID' => (string)$cardId
                 ]);
                 $this->dispatch('notify', message: 'Card added to wishlist!');

@@ -65,7 +65,7 @@
                 $avatarIndex = is_numeric($user->userID) ? (substr($user->userID, -1) % 6) : 0;
                 $defaultAvatar = "https://cdn.discordapp.com/embed/avatars/{$avatarIndex}.png";
                 $avatarUrl = \Illuminate\Support\Facades\Cache::remember('discord_avatar_' . $user->userID, 86400, function() use ($user, $defaultAvatar) {
-                    $botToken = env('DISCORD_BOT_TOKEN');
+                    $botToken = config('services.discord.bot_token');
                     if (!$botToken) return $defaultAvatar;
                     $response = \Illuminate\Support\Facades\Http::withHeaders(['Authorization' => "Bot {$botToken}"])->get("https://discord.com/api/users/{$user->userID}");
                     if ($response->successful() && !empty($response->json('avatar'))) {

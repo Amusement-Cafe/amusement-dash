@@ -139,8 +139,8 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
         }
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'Authorization' => env('AMUSE_API_KEY')
-        ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/auction/bid?user=' . auth()->user()->userID, [
+            'Authorization' => config('services.amuse.api_key')
+        ])->timeout(5)->post(config('services.amuse.api_root') . '/user/auction/bid?user=' . auth()->user()->userID, [
             'auctionID' => $this->selectedAuctionId,
             'amount' => $this->bidAmount,
         ]);
@@ -394,7 +394,7 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
                     <!-- Hover Overlay over the entire auction card -->
                     <div x-show="hovered" x-transition.opacity.duration.200ms style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 20; border-radius: 16px;">
                         <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                            <button wire:click="openAuctionModal('{{ $auction->auctionID }}')" class="btn btn-primary" style="background: var(--accent-solid); color: white; border-radius: 9999px; padding: 0.6rem 1.5rem; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 15px var(--accent-glow); display: flex; align-items: center; gap: 0.5rem; transform: scale(1.1);">
+                            <button wire:click="openAuctionModal({{ Js::from($auction->auctionID) }})" class="btn btn-primary" style="background: var(--accent-solid); color: white; border-radius: 9999px; padding: 0.6rem 1.5rem; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 4px 15px var(--accent-glow); display: flex; align-items: center; gap: 0.5rem; transform: scale(1.1);">
                                 <i class="ph-bold ph-eye"></i> View Details
                             </button>
                         </div>
@@ -406,7 +406,7 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
                             {{ number_format($auction->price) }} 🍅
                         </span>
                         
-                        <button style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; transition: background 0.2s, color 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.color='white';" onmouseout="this.style.background='rgba(0,0,0,0.5)'; this.style.color='var(--text-secondary)';" onclick="navigator.clipboard.writeText('{{ $auction->auctionID }}'); Livewire.dispatch('notify', { message: 'Copied Auction ID!' });" title="Copy ID">
+                        <button style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; transition: background 0.2s, color 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.color='white';" onmouseout="this.style.background='rgba(0,0,0,0.5)'; this.style.color='var(--text-secondary)';" onclick="navigator.clipboard.writeText({{ Js::from($auction->auctionID) }}); Livewire.dispatch('notify', { message: 'Copied Auction ID!' });" title="Copy ID">
                             <i class="ph-bold ph-copy"></i> Copy ID
                         </button>
                     </div>
@@ -503,7 +503,7 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
                     <p style="color: var(--text-secondary); font-size: 1.2rem; margin: 0;">
                         {{ str_repeat('⭐', $selectedCard->rarity ?? 1) }} | Card ID: #{{ $selectedCard->cardID }}
                     </p>
-                    <span style="color: var(--text-secondary); font-size: 0.9rem; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--glass-border); cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-secondary)'" onclick="navigator.clipboard.writeText('{{ $selectedAuction->auctionID }}'); Livewire.dispatch('notify', { message: 'Copied Auction ID!' });" title="Copy Auction ID">
+                    <span style="color: var(--text-secondary); font-size: 0.9rem; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--glass-border); cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-secondary)'" onclick="navigator.clipboard.writeText({{ Js::from($selectedAuction->auctionID) }}); Livewire.dispatch('notify', { message: 'Copied Auction ID!' });" title="Copy Auction ID">
                         Auction ID: {{ $selectedAuction->auctionID }} <i class="ph-bold ph-copy"></i>
                     </span>
                 </div>

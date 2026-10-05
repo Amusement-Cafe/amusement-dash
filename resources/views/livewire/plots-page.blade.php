@@ -15,8 +15,8 @@ new #[Layout('layouts.app')] class extends Component {
         }
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'Authorization' => env('AMUSE_API_KEY')
-        ])->timeout(5)->post(env('AMUSE_API_ROOT') . '/user/plots/collect?user=' . Auth::user()->userID, [
+            'Authorization' => config('services.amuse.api_key')
+        ])->timeout(5)->post(config('services.amuse.api_root') . '/user/plots/collect?user=' . Auth::user()->userID, [
             'guildID' => $guildID
         ]);
 
@@ -171,7 +171,7 @@ new #[Layout('layouts.app')] class extends Component {
                             
                             @if($group['totalLemons'] > 0)
                                 @if(auth()->user()?->canWrite())
-                                    <button wire:click="collectAll('{{ $guildID }}')" class="btn btn-primary" style="padding: 0.6rem 1.2rem; font-weight: bold; display: flex; align-items: center; gap: 0.5rem; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(234, 179, 8, 0.3);">
+                                    <button wire:click="collectAll({{ Js::from($guildID) }})" class="btn btn-primary" style="padding: 0.6rem 1.2rem; font-weight: bold; display: flex; align-items: center; gap: 0.5rem; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(234, 179, 8, 0.3);">
                                         <i class="ph-bold ph-hand-coins"></i> Collect All
                                     </button>
                                 @endif
