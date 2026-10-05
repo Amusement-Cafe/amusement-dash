@@ -43,6 +43,7 @@ Install and build the frontend assets (CSS/JS) using Vite.
 npm install
 npm run build
 ```
+*`package-lock.json` is committed so every machine and the production build get the same versions. If it conflicts during a merge, don't edit it by hand: take either side, run `npm install`, and commit the result.*
 
 ### 4. Environment Configuration
 Copy the sample `.env.example` file to create your own local `.env` configuration file.
@@ -143,7 +144,7 @@ git clone <repository-url> /var/www/amusement-dash
 cd /var/www/amusement-dash
 
 composer install --no-dev --optimize-autoloader
-npm install
+npm ci                 # installs exactly what package-lock.json pins
 npm run build          # outputs to public/build; node is not needed at runtime
 ```
 
@@ -246,7 +247,7 @@ cd /var/www/amusement-dash
 php artisan down
 git pull
 composer install --no-dev --optimize-autoloader
-npm install && npm run build
+npm ci && npm run build
 php artisan optimize
 sudo systemctl reload php8.3-fpm     # clears OPcache so new code is picked up
 php artisan up
