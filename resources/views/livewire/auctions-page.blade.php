@@ -146,7 +146,7 @@ new #[Layout('layouts.app')] #[Title('Auctions')] class extends Component
         ]);
 
         if (!$response->successful()) {
-            $this->dispatch('notify', message: $response->body() ?: 'Bid failed.');
+            $this->dispatch('notify', message: \App\Support\ApiError::message($response, 'Bid failed.'), type: 'error');
         }
 
         $this->closeModal();

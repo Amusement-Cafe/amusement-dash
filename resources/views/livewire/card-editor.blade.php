@@ -192,7 +192,7 @@ new #[Layout('layouts.app')] #[Title('Card Editor')] class extends Component
             $this->isDirty = false;
             session()->flash('message', 'Card updated successfully.');
         } else {
-            session()->flash('message', 'Failed to update card: ' . $response->body());
+            session()->flash('message', \App\Support\ApiError::message($response, 'Failed to update card.'));
         }
     }
 };

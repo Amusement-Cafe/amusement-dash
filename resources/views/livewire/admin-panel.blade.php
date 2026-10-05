@@ -73,7 +73,7 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
             'vials' => $this->editVials,
         ]);
 
-        $this->successMessage = $response->successful() ? "Balances updated successfully!" : "Failed: " . $response->body();
+        $this->successMessage = $response->successful() ? "Balances updated successfully!" : \App\Support\ApiError::message($response, 'Could not update balances.');
     }
 
     public function giveCard()
@@ -94,7 +94,7 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
         ]);
 
         $this->giveCardId = '';
-        $this->successMessage = $response->successful() ? "Card {$card->cardName} given to user!" : "Failed: " . $response->body();
+        $this->successMessage = $response->successful() ? "Card {$card->cardName} given to user!" : \App\Support\ApiError::message($response, 'Could not give the card.');
     }
 
     public function giveItem()
@@ -111,7 +111,7 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
 
         $this->giveItemType = '';
         $this->giveItemId = '';
-        $this->successMessage = $response->successful() ? "Item given to user!" : "Failed: " . $response->body();
+        $this->successMessage = $response->successful() ? "Item given to user!" : \App\Support\ApiError::message($response, 'Could not give the item.');
     }
 
     public function resetDaily()
@@ -124,7 +124,7 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
             'targetUserID' => $this->targetUserId,
         ]);
 
-        $this->successMessage = $response->successful() ? "Daily streak reset! User can claim daily again." : "Failed: " . $response->body();
+        $this->successMessage = $response->successful() ? "Daily streak reset! User can claim daily again." : \App\Support\ApiError::message($response, 'Could not reset the daily streak.');
     }
 
     public function togglePage(string $page)

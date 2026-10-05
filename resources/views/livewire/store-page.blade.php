@@ -59,7 +59,7 @@ new class extends Component {
             }
             $this->dispatch('notify', message: "Successfully purchased $name!");
         } else {
-            $this->dispatch('notify', message: $response->body() ?: 'Purchase failed.');
+            $this->dispatch('notify', message: \App\Support\ApiError::message($response, 'Purchase failed.'), type: 'error');
         }
     }
     

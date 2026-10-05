@@ -21,7 +21,7 @@ new class extends Component {
             ]);
 
             if (!$response->successful()) {
-                $this->dispatch('notify', message: $response->status() === 400 && $response->body() ? $response->body() : 'Could not update your profile card.', type: 'error');
+                $this->dispatch('notify', message: \App\Support\ApiError::message($response, 'Could not update your profile card.'), type: 'error');
                 return;
             }
 

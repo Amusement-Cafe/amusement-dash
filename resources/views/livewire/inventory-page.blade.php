@@ -41,7 +41,7 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
         ]);
 
         if (!$response->successful()) {
-            $this->dispatch('notify', message: $response->body() ?: 'Could not use this item, please try again.', type: 'error');
+            $this->dispatch('notify', message: \App\Support\ApiError::message($response, 'Could not use this item, please try again.'), type: 'error');
             return;
         }
 

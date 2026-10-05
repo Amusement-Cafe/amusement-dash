@@ -13,6 +13,7 @@ This project is a web dashboard for the "Amusement Club 3.0" Discord bot. It is 
 8. **No Placeholders**: Do not leave components half-finished.
 9. **Settings via `config()`, never `env()`**: Outside `config/`, read settings with `config('services.amuse.api_root')`, `config('services.amuse.api_key')`, `config('services.amuse.card_root')` and `config('services.discord.bot_token')`. Production caches config, after which `env()` returns null and every bot API call breaks.
 10. **Values inside JS attributes use `Js::from()`**: In `wire:click`, `@click`, `x-data`, `onclick` and similar, write `wire:click="removeTag({{ Js::from($tag) }})"`, never `'{{ $tag }}'`. Blade's escaping is decoded by the browser before the expression runs, so a quoted echo of user input (e.g. a `#[Url]` property) is an XSS hole.
+11. **Show bot API failures with `ApiError::message($response, 'Fallback.')`** (`app/Support/ApiError.php`), never `$response->body()`. It logs the failure, shows the raw status and body when `APP_DEBUG` is on, and in production passes through only 4xx messages the bot wrote for users. On the bot side, user-facing errors are plain sentences; developer errors start with `Bad Request -` or `Forbidden -`.
 
 ## Bot Database Schema Notes
 - **Users**: `users` collection. Key fields: `userID`, `username`, `tomatoes`, `vials`, `lemons`, `xp`.

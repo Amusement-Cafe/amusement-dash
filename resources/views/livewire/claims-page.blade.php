@@ -239,8 +239,7 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
             // Refresh user data for updated balance display
             auth()->user()->refresh();
         } else {
-            $body = $response->body();
-            session()->flash('error', $body ?: 'Claim failed. Please try again.');
+            session()->flash('error', \App\Support\ApiError::message($response, 'Claim failed. Please try again.'));
         }
     }
 

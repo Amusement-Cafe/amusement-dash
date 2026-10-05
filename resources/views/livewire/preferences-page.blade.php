@@ -80,10 +80,7 @@ new #[Layout('layouts.app')] #[Title('Preferences')] class extends Component
             session()->flash('success', 'Preferences saved successfully.');
             $this->dispatch('save-success');
         } else {
-            // 400s carry a validation message written for users; anything else is internal.
-            session()->flash('error', $response->status() === 400 && $response->body()
-                ? $response->body()
-                : 'Failed to save preferences. Please try again.');
+            session()->flash('error', \App\Support\ApiError::message($response, 'Failed to save preferences. Please try again.'));
         }
     }
 };
