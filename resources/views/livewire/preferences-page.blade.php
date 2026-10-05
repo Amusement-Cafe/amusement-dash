@@ -80,7 +80,10 @@ new #[Layout('layouts.app')] #[Title('Preferences')] class extends Component
             session()->flash('success', 'Preferences saved successfully.');
             $this->dispatch('save-success');
         } else {
-            session()->flash('error', 'Failed to save preferences: ' . $response->status());
+            // 400s carry a validation message written for users; anything else is internal.
+            session()->flash('error', $response->status() === 400 && $response->body()
+                ? $response->body()
+                : 'Failed to save preferences. Please try again.');
         }
     }
 };
@@ -174,7 +177,7 @@ new #[Layout('layouts.app')] #[Title('Preferences')] class extends Component
             <div style="display: flex; flex-direction: column; gap: 1.5rem;">
                 <div>
                     <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Bio</label>
-                    <textarea wire:model="prefs.profile.bio" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; padding: 0.8rem; border-radius: 8px; resize: vertical; min-height: 80px;"></textarea>
+                    <textarea wire:model="prefs.profile.bio" maxlength="500" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; padding: 0.8rem; border-radius: 8px; resize: vertical; min-height: 80px;"></textarea>
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">

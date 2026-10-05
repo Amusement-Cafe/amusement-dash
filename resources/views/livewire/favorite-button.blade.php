@@ -10,7 +10,7 @@ new class extends Component {
     {
         $user = auth()->user();
         if ($user && $this->userCopies > 0) {
-            \Illuminate\Support\Facades\Http::withHeaders([
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
                 'Authorization' => config('services.amuse.api_key')
             ])->timeout(5)->patch(config('services.amuse.api_root') . '/user/preferences?user=' . $user->userID, [
                 'preferences' => [
@@ -20,10 +20,11 @@ new class extends Component {
                 ]
             ]);
 
-            $prefs = $user->preferences ?? [];
-            $prefs['profile']['card'] = (string)$this->cardId;
-            $user->preferences = $prefs;
-            // $user->save(); // Deprecated DB write in favor of API route
+            if (!$response->successful()) {
+                $this->dispatch('notify', message: $response->status() === 400 && $response->body() ? $response->body() : 'Could not update your profile card.', type: 'error');
+                return;
+            }
+
             session()->flash('fav_success', 'Profile favorite card updated!');
             $this->dispatch('profile-fav-updated');
         }
