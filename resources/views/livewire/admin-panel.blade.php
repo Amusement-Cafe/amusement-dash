@@ -320,7 +320,7 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
                 $avatarUrl = $targetUser->avatarUrl();
             @endphp
             <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <img src="{{ $avatarUrl }}" alt="Avatar" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+                <img src="{{ $avatarUrl }}" onerror="this.onerror=null; this.src='{{ \App\Models\User::defaultAvatarUrl($targetUser->userID) }}'" alt="Avatar" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
                 <div>
                     <h2 style="margin: 0; font-size: 1.5rem;">{{ $targetUser->username }}</h2>
                     <span style="color: var(--text-secondary); font-family: monospace;">{{ $targetUser->userID }}</span>

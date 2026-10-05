@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use MongoDB\Laravel\Auth\User as Authenticatable;
+use MongoDB\Laravel\Relations\HasOne;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -39,6 +40,27 @@ class User extends Authenticatable
         ];
     }
 
+    public function dashboardUser(): HasOne
+    {
+        return $this->hasOne(DashboardUser::class, 'userID', 'userID');
+    }
+
+    /**
+     * The remember-me token lives in the dashboard's own collection, so login
+     * and logout never write to the bot's `users` documents. Laravel still
+     * calls save() after setRememberToken(), but no attribute here is dirty.
+     */
+    public function getRememberToken()
+    {
+        return $this->dashboardUser?->remember_token;
+    }
+
+    public function setRememberToken($value)
+    {
+        DashboardUser::put($this->userID, ['remember_token' => $value]);
+        $this->unsetRelation('dashboardUser');
+    }
+
     public function canWrite(): bool
     {
         if (empty($this->roles)) {
@@ -70,7 +92,7 @@ class User extends Authenticatable
 
     /**
      * Discord avatar URL, falling back to Discord's default avatar. Looked up
-     * with the bot token and cached for a day; a failed lookup is cached for
+     * with the bot token and cached for 30 days; a failed lookup is cached for
      * ten minutes only and never throws, so a slow Discord can't take pages down.
      */
     public function avatarUrl(): string
@@ -80,8 +102,7 @@ class User extends Authenticatable
             return $cached;
         }
 
-        $index = is_numeric($this->userID) ? (substr($this->userID, -1) % 6) : 0;
-        $default = "https://cdn.discordapp.com/embed/avatars/{$index}.png";
+        $default = self::defaultAvatarUrl($this->userID);
 
         $botToken = config('services.discord.bot_token');
         if (!$botToken) {
@@ -100,7 +121,7 @@ class User extends Authenticatable
 
         if (!$response->successful()) {
             // 404 means the account is gone; anything else is worth retrying soon.
-            Cache::put($key, $default, $response->notFound() ? 86400 : 600);
+            Cache::put($key, $default, $response->notFound() ? now()->addDays(30) : 600);
             return $default;
         }
 
@@ -110,7 +131,17 @@ class User extends Authenticatable
             $ext = str_starts_with($hash, 'a_') ? 'gif' : 'png';
             $url = "https://cdn.discordapp.com/avatars/{$this->userID}/{$hash}.{$ext}?size=256";
         }
-        Cache::put($key, $url, 86400);
+        Cache::put($key, $url, now()->addDays(30));
         return $url;
+    }
+
+    /**
+     * Discord's built-in default avatar for a user. Also the <img onerror>
+     * fallback for a cached avatar URL that has gone stale on Discord's CDN.
+     */
+    public static function defaultAvatarUrl(?string $userID): string
+    {
+        $index = is_numeric($userID) ? (substr($userID, -1) % 6) : 0;
+        return "https://cdn.discordapp.com/embed/avatars/{$index}.png";
     }
 }

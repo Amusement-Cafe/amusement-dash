@@ -223,10 +223,9 @@ new #[Title('Leaderboards')] class extends Component {
         <div style="display: flex; align-items: center; gap: 1rem;">
             @php
                 $myUser = auth()->user();
-                $avatarIndex = is_numeric($myUser->userID) ? (substr($myUser->userID, -1) % 6) : 0;
-                $defaultAvatar = "https://cdn.discordapp.com/embed/avatars/{$avatarIndex}.png";
+                $defaultAvatar = \App\Models\User::defaultAvatarUrl($myUser->userID);
             @endphp
-            <img src="{{ \Illuminate\Support\Facades\Cache::get('discord_avatar_' . $myUser->userID, $defaultAvatar) }}" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--accent-solid); object-fit: cover;">
+            <img src="{{ \Illuminate\Support\Facades\Cache::get('discord_avatar_' . $myUser->userID, $defaultAvatar) }}" onerror="this.onerror=null; this.src='{{ $defaultAvatar }}'" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--accent-solid); object-fit: cover;">
             <div>
                 <h3 style="margin: 0; color: white; font-size: 1.2rem;">{{ $myUser->username }}</h3>
                 <p style="margin: 0; color: var(--text-secondary); font-size: 0.9rem;">Your position</p>
@@ -293,10 +292,9 @@ new #[Title('Leaderboards')] class extends Component {
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         @php
                             $uId = $row['id'] ?? $row['_id'] ?? null;
-                            $avatarIndex = is_numeric($uId) ? (substr($uId, -1) % 6) : 0;
-                            $defaultAvatar = "https://cdn.discordapp.com/embed/avatars/{$avatarIndex}.png";
+                            $defaultAvatar = \App\Models\User::defaultAvatarUrl($uId);
                         @endphp
-                        <img src="{{ \Illuminate\Support\Facades\Cache::get('discord_avatar_' . $uId, $defaultAvatar) }}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid {{ $isTop3 ? $rankColor : 'transparent' }};">
+                        <img src="{{ \Illuminate\Support\Facades\Cache::get('discord_avatar_' . $uId, $defaultAvatar) }}" onerror="this.onerror=null; this.src='{{ $defaultAvatar }}'" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid {{ $isTop3 ? $rankColor : 'transparent' }};">
                         
                         <div style="display: flex; flex-direction: column;">
                             <span style="font-weight: 600; font-size: 1.1rem; color: {{ !empty($row['color']) ? $row['color'] : ($isCurrentUser ? 'var(--accent-solid)' : 'white') }};">

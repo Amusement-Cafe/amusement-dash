@@ -235,7 +235,7 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
                                         $avatarUrl = $selectedOtherUser->avatarUrl();
                                     @endphp
                                     <div style="width: 48px; height: 48px; border-radius: 50%; border: 2px solid {{ $hexColor }}; overflow: hidden; background: var(--glass-border); flex-shrink: 0;">
-                                        <img src="{{ $avatarUrl }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+                                        <img src="{{ $avatarUrl }}" onerror="this.onerror=null; this.src='{{ \App\Models\User::defaultAvatarUrl($selectedOtherUser->userID) }}'" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
                                     </div>
                                     <div>
                                         <a href="/profile?id={{ $selectedOtherUser->userID }}" style="color: white; text-decoration: none; font-weight: bold; font-size: 1.2rem; transition: color 0.2s;" onmouseover="this.style.color='var(--accent-solid)'" onmouseout="this.style.color='white'">

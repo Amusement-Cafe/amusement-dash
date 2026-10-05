@@ -110,7 +110,7 @@
                     @endif
                     <div x-data="{ open: false }" style="position: relative;">
                         <button @click="open = !open" @click.away="open = false" style="background: transparent; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.5rem; border-radius: 20px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
-                            <img src="{{ $avatarUrl }}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-solid);">
+                            <img src="{{ $avatarUrl }}" onerror="this.onerror=null; this.src='{{ \App\Models\User::defaultAvatarUrl($user->userID) }}'" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-solid);">
                             <span style="color: white; font-weight: bold; font-family: inherit; max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $user->username }}</span>
                             <i class="ph-bold ph-caret-down" style="color: var(--text-secondary); transition: transform 0.2s;" :style="{ transform: open ? 'rotate(180deg)' : 'none' }"></i>
                         </button>

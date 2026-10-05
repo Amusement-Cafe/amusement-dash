@@ -363,7 +363,7 @@ new #[Layout('layouts.app')] #[Title('Cards')] class extends Component
     <div id="card-directory-top" style="margin-bottom: 1rem;">
         @if($owner)
             <div style="display: flex; align-items: center; gap: 1rem;">
-                <img src="{{ $ownerAvatar }}" alt="Avatar" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-solid); box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);">
+                <img src="{{ $ownerAvatar }}" onerror="this.onerror=null; this.src='{{ \App\Models\User::defaultAvatarUrl($owner) }}'" alt="Avatar" style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-solid); box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);">
                 <h1 style="font-size: 2.5rem; margin: 0; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                     <span style="color: var(--accent-solid); text-shadow: 0 0 10px rgba(99, 102, 241, 0.3);">{{ $ownerUser ? $ownerUser->username : "User " . $owner }}</span>'s Cards
                     <span style="color: var(--text-secondary); font-size: 1.5rem; font-weight: normal;">({{ number_format($cards->total()) }})</span>

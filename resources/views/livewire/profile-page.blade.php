@@ -229,7 +229,7 @@ new #[Layout('layouts.app')] #[Title('Profile')] class extends Component
             <div style="position: absolute; top: -50px; left: 0; width: 300px; height: 300px; background: {{ $hexColor }}; filter: blur(100px); opacity: 0.2; pointer-events: none;"></div>
             
             <div style="position: relative; z-index: 10; flex-shrink: 0;">
-                <img src="{{ $avatarUrl }}" alt="Avatar" style="width: 120px; height: 120px; border-radius: 50%; {{ $hasAmuPlus ? 'padding: 4px; background: linear-gradient(135deg, #06b6d4, #a855f7);' : 'border: 4px solid ' . $levelColor . ';' }} object-fit: cover;">
+                <img src="{{ $avatarUrl }}" onerror="this.onerror=null; this.src='{{ \App\Models\User::defaultAvatarUrl($userProfile->userID) }}'" alt="Avatar" style="width: 120px; height: 120px; border-radius: 50%; {{ $hasAmuPlus ? 'padding: 4px; background: linear-gradient(135deg, #06b6d4, #a855f7);' : 'border: 4px solid ' . $levelColor . ';' }} object-fit: cover;">
                 <div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); {{ $hasAmuPlus ? 'background: linear-gradient(135deg, #06b6d4, #a855f7);' : 'background: ' . $levelColor . ';' }} color: white; padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 10px rgba(0,0,0,0.5); white-space: nowrap;">
                     LVL {{ $level }}
                 </div>
