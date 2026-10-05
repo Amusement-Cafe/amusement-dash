@@ -37,6 +37,7 @@ class PageToggle extends Model
     // Dashboard features that live inside a page that stays reachable.
     public const FEATURES = [
         'claiming' => 'Claiming',
+        'ticket_redeem' => 'Ticket Redeeming',
     ];
 
     public static function toggles(): array

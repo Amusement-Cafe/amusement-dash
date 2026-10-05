@@ -29,6 +29,11 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
             return;
         }
 
+        if (!\App\Models\PageToggle::isEnabled('ticket_redeem')) {
+            $this->dispatch('notify', message: 'Redeeming tickets is currently unavailable on the dashboard.', type: 'error');
+            return;
+        }
+
         if ($itemId) {
             $this->selectedItemId = $itemId;
         }
@@ -82,6 +87,7 @@ new #[Layout('layouts.app')] #[Title('Inventory')] class extends Component
             'inventoryItems' => $inventoryItems,
             'collections' => $collections,
             'storeItems' => $storeItems,
+            'canRedeem' => \App\Models\PageToggle::isEnabled('ticket_redeem'),
         ];
     }
 };
@@ -113,6 +119,12 @@ x-effect="document.body.style.overflow = (showConfirmModal || showReveal) ? 'hid
             <a href="https://ko-fi.com/amusement" target="_blank" class="btn-amuplus" style="padding: 0.8rem 2rem; border-radius: 50px; display: inline-flex;">
                 <i class="ph-bold ph-coffee"></i> Get AmuPlus to Use Items
             </a>
+        </div>
+    @endif
+
+    @if(auth()->user()?->canWrite() && !$canRedeem)
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; text-align: center; margin-bottom: 2rem;">
+            <p style="color: var(--text-secondary); margin: 0; font-size: 1.1rem;">Redeeming tickets is currently unavailable on the dashboard. You can still use them on Discord.</p>
         </div>
     @endif
 
@@ -211,7 +223,7 @@ x-effect="document.body.style.overflow = (showConfirmModal || showReveal) ? 'hid
                     </div>
                     
                     <div class="item-action-overlay">
-                        @if(auth()->user()?->canWrite())
+                        @if(auth()->user()?->canWrite() && $canRedeem)
                             <button @click="selectedItemId = {{ Js::from($item->id) }}; showConfirmModal = true;" class="btn btn-primary" style="font-size: 1.1rem; padding: 0.8rem 2rem; box-shadow: 0 0 20px {{ $color }}60; border: 1px solid {{ $color }};">
                                 <i class="ph-bold ph-magic-wand"></i> Use Item
                             </button>
