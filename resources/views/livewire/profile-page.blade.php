@@ -196,24 +196,7 @@ new #[Layout('layouts.app')] #[Title('Profile')] class extends Component
             
             $hasAmuPlus = !empty($userProfile->roles) && in_array('AmuPlus', $userProfile->roles);
 
-            $avatarIndex = is_numeric($userProfile->userID) ? (substr($userProfile->userID, -1) % 6) : 0;
-            $defaultAvatar = "https://cdn.discordapp.com/embed/avatars/{$avatarIndex}.png";
-            
-            $avatarUrl = \Illuminate\Support\Facades\Cache::remember('discord_avatar_' . $userProfile->userID, 86400, function() use ($userProfile, $defaultAvatar) {
-                $botToken = config('services.discord.bot_token');
-                if (!$botToken) return $defaultAvatar;
-                
-                $response = \Illuminate\Support\Facades\Http::withToken($botToken, 'Bot')
-                    ->timeout(3)
-                    ->get("https://discord.com/api/v10/users/{$userProfile->userID}");
-                    
-                if ($response->successful() && !empty($response->json('avatar'))) {
-                    $hash = $response->json('avatar');
-                    $ext = str_starts_with($hash, 'a_') ? 'gif' : 'png';
-                    return "https://cdn.discordapp.com/avatars/{$userProfile->userID}/{$hash}.{$ext}?size=256";
-                }
-                return $defaultAvatar;
-            });
+            $avatarUrl = $userProfile->avatarUrl();
         @endphp
 
         <style>

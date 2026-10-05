@@ -232,24 +232,7 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
                                     @php
                                         $color = $selectedOtherUser->preferences['profile']['color'] ?? '16756480';
                                         $hexColor = '#' . str_pad(dechex($color), 6, "0", STR_PAD_LEFT);
-                                        $avatarIndex = is_numeric($selectedOtherUser->userID) ? (substr($selectedOtherUser->userID, -1) % 6) : 0;
-                                        $defaultAvatar = "https://cdn.discordapp.com/embed/avatars/{$avatarIndex}.png";
-                                        
-                                        $avatarUrl = \Illuminate\Support\Facades\Cache::remember('discord_avatar_' . $selectedOtherUser->userID, 86400, function() use ($selectedOtherUser, $defaultAvatar) {
-                                            $botToken = config('services.discord.bot_token');
-                                            if (!$botToken) return $defaultAvatar;
-                                            
-                                            $response = \Illuminate\Support\Facades\Http::withToken($botToken, 'Bot')
-                                                ->timeout(3)
-                                                ->get("https://discord.com/api/v10/users/{$selectedOtherUser->userID}");
-                                                
-                                            if ($response->successful() && !empty($response->json('avatar'))) {
-                                                $hash = $response->json('avatar');
-                                                $ext = str_starts_with($hash, 'a_') ? 'gif' : 'png';
-                                                return "https://cdn.discordapp.com/avatars/{$selectedOtherUser->userID}/{$hash}.{$ext}?size=256";
-                                            }
-                                            return $defaultAvatar;
-                                        });
+                                        $avatarUrl = $selectedOtherUser->avatarUrl();
                                     @endphp
                                     <div style="width: 48px; height: 48px; border-radius: 50%; border: 2px solid {{ $hexColor }}; overflow: hidden; background: var(--glass-border); flex-shrink: 0;">
                                         <img src="{{ $avatarUrl }}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">

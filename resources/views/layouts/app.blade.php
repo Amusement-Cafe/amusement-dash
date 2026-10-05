@@ -70,19 +70,7 @@
             $avatarUrl = '';
             $incomingTx = 0;
             if ($user) {
-                $avatarIndex = is_numeric($user->userID) ? (substr($user->userID, -1) % 6) : 0;
-                $defaultAvatar = "https://cdn.discordapp.com/embed/avatars/{$avatarIndex}.png";
-                $avatarUrl = \Illuminate\Support\Facades\Cache::remember('discord_avatar_' . $user->userID, 86400, function() use ($user, $defaultAvatar) {
-                    $botToken = config('services.discord.bot_token');
-                    if (!$botToken) return $defaultAvatar;
-                    $response = \Illuminate\Support\Facades\Http::withHeaders(['Authorization' => "Bot {$botToken}"])->get("https://discord.com/api/users/{$user->userID}");
-                    if ($response->successful() && !empty($response->json('avatar'))) {
-                        $hash = $response->json('avatar');
-                        $ext = str_starts_with($hash, 'a_') ? 'gif' : 'png';
-                        return "https://cdn.discordapp.com/avatars/{$user->userID}/{$hash}.{$ext}?size=256";
-                    }
-                    return $defaultAvatar;
-                });
+                $avatarUrl = $user->avatarUrl();
                 $incomingTx = \Illuminate\Support\Facades\DB::connection('mongodb')->table('transactions')->where('toID', $user->userID)->where('status', 'pending')->count();
             }
         @endphp

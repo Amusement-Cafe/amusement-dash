@@ -317,19 +317,7 @@ new #[Layout('layouts.app')] #[Title('Admin Panel')] class extends Component
 
         <div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem; border-top: 4px solid {{ $tab === 'edit' ? 'var(--accent-solid)' : '#a855f7' }};">
             @php
-                $avatarIndex = is_numeric($targetUser->userID) ? (substr($targetUser->userID, -1) % 6) : 0;
-                $defaultAvatar = "https://cdn.discordapp.com/embed/avatars/{$avatarIndex}.png";
-                $avatarUrl = \Illuminate\Support\Facades\Cache::remember('discord_avatar_' . $targetUser->userID, 86400, function() use ($targetUser, $defaultAvatar) {
-                    $botToken = config('services.discord.bot_token');
-                    if (!$botToken) return $defaultAvatar;
-                    $response = \Illuminate\Support\Facades\Http::withToken($botToken, 'Bot')->timeout(3)->get("https://discord.com/api/v10/users/{$targetUser->userID}");
-                    if ($response->successful() && !empty($response->json('avatar'))) {
-                        $hash = $response->json('avatar');
-                        $ext = str_starts_with($hash, 'a_') ? 'gif' : 'png';
-                        return "https://cdn.discordapp.com/avatars/{$targetUser->userID}/{$hash}.{$ext}?size=256";
-                    }
-                    return $defaultAvatar;
-                });
+                $avatarUrl = $targetUser->avatarUrl();
             @endphp
             <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <img src="{{ $avatarUrl }}" alt="Avatar" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">

@@ -143,24 +143,7 @@ new #[Layout('layouts.app')] #[Title('Cards')] class extends Component
             $ownerCardIDs = array_keys($ownerAcquired);
             
             if ($ownerUser) {
-                $avatarIndex = is_numeric($ownerUser->userID) ? (substr($ownerUser->userID, -1) % 6) : 0;
-                $defaultAvatar = "https://cdn.discordapp.com/embed/avatars/{$avatarIndex}.png";
-                
-                $ownerAvatar = Cache::remember('discord_avatar_' . $ownerUser->userID, 86400, function() use ($ownerUser, $defaultAvatar) {
-                    $botToken = config('services.discord.bot_token');
-                    if (!$botToken) return $defaultAvatar;
-                    
-                    $response = \Illuminate\Support\Facades\Http::withHeaders([
-                        'Authorization' => "Bot {$botToken}"
-                    ])->get("https://discord.com/api/users/{$ownerUser->userID}");
-                    
-                    if ($response->successful() && !empty($response->json('avatar'))) {
-                        $hash = $response->json('avatar');
-                        $ext = str_starts_with($hash, 'a_') ? 'gif' : 'png';
-                        return "https://cdn.discordapp.com/avatars/{$ownerUser->userID}/{$hash}.{$ext}?size=256";
-                    }
-                    return $defaultAvatar;
-                });
+                $ownerAvatar = $ownerUser->avatarUrl();
             }
 
             // If the user owns no cards, force an impossible condition so it returns 0 results cleanly
