@@ -136,7 +136,11 @@ new #[Layout('layouts.app')] #[Title('Cards')] class extends Component
         $ownerAvatar = null;
         if ($this->owner) {
             $ownerUser = \App\Models\User::where('userID', $this->owner)->first();
-            $ownerCardIDs = \App\Models\UserCard::where('userID', $this->owner)->pluck('cardID')->toArray();
+            // cardID => acquired timestamp; "Date Added" sorts by this when viewing an owner's cards
+            $ownerAcquired = \App\Models\UserCard::where('userID', $this->owner)->get(['cardID', 'acquired'])
+                ->mapWithKeys(fn($uc) => [(int) $uc->cardID => $uc->acquired ? $uc->acquired->getTimestampMs() : 0])
+                ->toArray();
+            $ownerCardIDs = array_keys($ownerAcquired);
             
             if ($ownerUser) {
                 $avatarIndex = is_numeric($ownerUser->userID) ? (substr($ownerUser->userID, -1) % 6) : 0;
@@ -264,12 +268,20 @@ new #[Layout('layouts.app')] #[Title('Cards')] class extends Component
             }
         }
 
-        if ($this->sortBy === 'random') {
-            $cardIDs = $query->pluck('cardID')->toArray();
-            mt_srand($this->randomSeed ?? mt_rand());
-            shuffle($cardIDs);
-            mt_srand();
-            
+        $sortInPhp = $this->sortBy === 'random' || ($this->sortBy === 'added' && $this->owner);
+
+        if ($sortInPhp) {
+            $cardIDs = $query->pluck('cardID')->map(fn($id) => (int) $id)->toArray();
+
+            if ($this->sortBy === 'random') {
+                mt_srand($this->randomSeed ?? mt_rand());
+                shuffle($cardIDs);
+                mt_srand();
+            } else {
+                $dir = $this->sortDesc ? -1 : 1;
+                usort($cardIDs, fn($a, $b) => $dir * (($ownerAcquired[$a] ?? 0) <=> ($ownerAcquired[$b] ?? 0)) ?: $a <=> $b);
+            }
+
             $page = $this->getPage();
             $perPage = 24;
             $slicedIds = array_slice($cardIDs, ($page - 1) * $perPage, $perPage);
