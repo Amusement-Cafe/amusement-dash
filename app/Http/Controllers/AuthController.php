@@ -24,22 +24,22 @@ class AuthController extends Controller
     {
         try {
             $discordUser = Socialite::driver('discord')->user();
-            
-            // Find or create the user in the "users" collection
-            // mapping their Discord ID to the 'userID' field.
-            $user = User::updateOrCreate([
-                'userID' => $discordUser->id,
-            ], [
-                'username' => $discordUser->nickname ?? $discordUser->name,
-            ]);
-            
-            Auth::login($user, true);
-            
-            return redirect()->intended('/');
-            
         } catch (\Exception $e) {
-            return redirect('/')->with('error', 'Authentication failed: ' . $e->getMessage());
+            report($e);
+            return redirect('/')->with('login_notice', 'Discord sign-in failed. Please try again.');
         }
+
+        // Accounts are only ever created by the bot, which fills in all the
+        // defaults the game relies on. Never create one from the dashboard.
+        $user = User::where('userID', (string) $discordUser->id)->first();
+
+        if (!$user) {
+            return redirect('/')->with('login_notice', 'You don\'t have an Amusement Club account yet. Run /daily with the bot on Discord, then come back and sign in.');
+        }
+
+        Auth::login($user, true);
+
+        return redirect()->intended('/');
     }
 
     /**

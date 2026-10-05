@@ -17,7 +17,7 @@ Volt::route('/heroes', 'heroes-page')->name('heroes.index')->middleware(['auth',
 Volt::route('/transactions', 'transactions-page')->name('transactions.index')->middleware('auth');
 Volt::route('/claims', 'claims-page')->name('claims.index')->middleware('auth');
 Volt::route('/card-editor', 'card-editor')->name('card.editor')->middleware('auth');
-Volt::route('/leaderboards', 'leaderboards-page')->name('leaderboards.index')->middleware('page:leaderboards');
+Volt::route('/leaderboards', 'leaderboards-page')->name('leaderboards.index')->middleware(['auth', 'page:leaderboards']);
 Volt::route('/plots', 'plots-page')->name('plots.index')->middleware(['auth', 'page:plots']);
 Volt::route('/admin', 'admin-panel')->name('admin.index')->middleware('auth');
 

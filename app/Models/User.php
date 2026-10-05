@@ -45,4 +45,24 @@ class User extends Authenticatable
         $r = array_map('strtolower', $this->roles);
         return count(array_intersect($r, ['amuplus', 'admin', 'metamod', 'tagmod', 'auditor'])) > 0;
     }
+
+    // Admins and auditors may look at other users' transactions and claims.
+    public function canAudit(): bool
+    {
+        if (empty($this->roles)) {
+            return false;
+        }
+        $r = array_map('strtolower', $this->roles);
+        return count(array_intersect($r, ['admin', 'auditor'])) > 0;
+    }
+
+    public function canViewTransaction($tx): bool
+    {
+        return in_array($this->userID, [$tx->fromID, $tx->toID], true) || $this->canAudit();
+    }
+
+    public function canViewClaim($claim): bool
+    {
+        return $claim->userID === $this->userID || $this->canAudit();
+    }
 }

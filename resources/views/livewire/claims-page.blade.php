@@ -262,10 +262,16 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
         }
 
         $selectedClaim = null;
+        $viewForbidden = false;
         $claimCards = [];
 
         if ($this->id) {
             $selectedClaim = Claim::where('_id', $this->id)->orWhere('claimID', $this->id)->first();
+
+            if ($selectedClaim && !$user->canViewClaim($selectedClaim)) {
+                $selectedClaim = null;
+                $viewForbidden = true;
+            }
             
             if ($selectedClaim) {
                 if (!empty($selectedClaim->cardIDs)) {
@@ -278,6 +284,7 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
         return [
             'claims' => $claims,
             'selectedClaim' => $selectedClaim,
+            'viewForbidden' => $viewForbidden,
             'claimCards' => $claimCards,
             'currentUser' => $user,
         ];
@@ -651,6 +658,11 @@ new #[Layout('layouts.app')] #[Title('Claims')] class extends Component
                                         </div>
                                     @endif
                                 </div>
+                            </div>
+                        @elseif($viewForbidden)
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary); padding: 4rem;">
+                                <i class="ph-light ph-lock" style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                                <p style="font-size: 1.1rem;">You are not allowed to view this claim.</p>
                             </div>
                         @else
                             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary); padding: 4rem;">

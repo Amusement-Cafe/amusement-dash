@@ -13,6 +13,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
+        // There is no login page; guests go straight to Discord and come back.
+        $middleware->redirectGuestsTo(fn () => route('login.discord'));
         $middleware->alias([
             'page' => \App\Http\Middleware\EnsurePageEnabled::class,
         ]);

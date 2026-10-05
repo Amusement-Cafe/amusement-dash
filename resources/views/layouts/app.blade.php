@@ -55,6 +55,14 @@
                 The Amusement API is currently unreachable. Some functionality may be limited.
             </div>
         @endif
+
+        @if(session('login_notice'))
+            <div x-data="{ open: true }" x-show="open" style="background-color: #eab308; color: black; text-align: center; padding: 0.75rem 3rem; font-weight: bold; font-size: 0.95rem; z-index: 50; position: relative;">
+                <i class="ph-bold ph-info" style="vertical-align: middle; margin-right: 0.25rem;"></i>
+                {{ session('login_notice') }}
+                <button @click="open = false" aria-label="Dismiss" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: black; cursor: pointer; font-size: 1.1rem;"><i class="ph-bold ph-x"></i></button>
+            </div>
+        @endif
         
         <!-- Navigation -->
         @php

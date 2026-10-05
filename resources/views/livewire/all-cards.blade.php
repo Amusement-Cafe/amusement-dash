@@ -193,7 +193,7 @@ new #[Layout('layouts.app')] #[Title('Cards')] class extends Component
 
         if ($this->transactionID !== '') {
             $tx = \App\Models\Transaction::where('transactionID', $this->transactionID)->orWhere('_id', $this->transactionID)->first();
-            if ($tx && !empty($tx->cardIDs)) {
+            if ($tx && !empty($tx->cardIDs) && auth()->user()?->canViewTransaction($tx)) {
                 $query->whereIn('cardID', $tx->cardIDs);
             } else {
                 $query->where('cardID', -1);
@@ -202,7 +202,7 @@ new #[Layout('layouts.app')] #[Title('Cards')] class extends Component
 
         if ($this->claimID !== '') {
             $claim = \App\Models\Claim::where('claimID', $this->claimID)->orWhere('_id', $this->claimID)->first();
-            if ($claim && !empty($claim->cardIDs)) {
+            if ($claim && !empty($claim->cardIDs) && auth()->user()?->canViewClaim($claim)) {
                 $query->whereIn('cardID', $claim->cardIDs);
             } else {
                 $query->where('cardID', -1);

@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Livewire\Attributes\Title;
 
 new #[Title('Leaderboards')] class extends Component {
+    #[\Livewire\Attributes\Locked]
     public $activeTab = 'Cards';
     public $leaderboardData = [];
     public $currentUserRank = null;
@@ -19,8 +20,12 @@ new #[Title('Leaderboards')] class extends Component {
         $this->loadLeaderboard();
     }
 
+    public const TABS = ['Cards', 'Clout', 'Completed', 'Lemons', 'Level', 'Tomatoes', 'Vials'];
+
     public function setTab($tab)
     {
+        // Each tab caches a Leaderboard record, so only accept known ones.
+        if (!in_array($tab, self::TABS, true)) return;
         $this->activeTab = $tab;
         $this->loadLeaderboard();
     }
@@ -198,7 +203,7 @@ new #[Title('Leaderboards')] class extends Component {
 
     <!-- Tabs -->
     <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-bottom: 2rem; background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 16px; border: 1px solid var(--glass-border); backdrop-filter: blur(10px);">
-        @foreach(['Cards', 'Clout', 'Completed', 'Lemons', 'Level', 'Tomatoes', 'Vials'] as $tab)
+        @foreach($this::TABS as $tab)
             <button wire:click="setTab({{ Js::from($tab) }})" 
                     style="background: {{ $activeTab === $tab ? 'rgba(255,255,255,0.1)' : 'transparent' }}; 
                            border: 1px solid {{ $activeTab === $tab ? 'rgba(255,255,255,0.2)' : 'transparent' }}; 

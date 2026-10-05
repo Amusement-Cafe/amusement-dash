@@ -49,12 +49,18 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
 
         // Details for selected transaction
         $selectedTransaction = null;
+        $viewForbidden = false;
         $selectedOtherUser = null;
         $transactionCards = [];
         $cardCounts = [];
 
         if ($this->id) {
             $selectedTransaction = Transaction::where('_id', $this->id)->orWhere('transactionID', $this->id)->first();
+
+            if ($selectedTransaction && !$user->canViewTransaction($selectedTransaction)) {
+                $selectedTransaction = null;
+                $viewForbidden = true;
+            }
             
             if ($selectedTransaction) {
                 $otherID = $selectedTransaction->toID === $user->userID ? $selectedTransaction->fromID : $selectedTransaction->toID;
@@ -77,6 +83,7 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
             'transactions' => $transactions,
             'transactionUsers' => $transactionUsers,
             'selectedTransaction' => $selectedTransaction,
+            'viewForbidden' => $viewForbidden,
             'selectedOtherUser' => $selectedOtherUser,
             'transactionCards' => $transactionCards,
             'cardCounts' => $cardCounts,
@@ -325,6 +332,12 @@ new #[Layout('layouts.app')] #[Title('Transactions')] class extends Component
                             </div>
                         @endif
                     </div>
+                </div>
+            @elseif($viewForbidden)
+                <div class="glass-panel" style="padding: 4rem 2rem; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; border: 2px dashed var(--glass-border);">
+                    <i class="ph-light ph-lock" style="font-size: 4rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
+                    <h3 style="margin: 0 0 0.5rem 0;">Not allowed</h3>
+                    <p style="margin: 0; color: var(--text-secondary); max-width: 250px;">You are not allowed to view this transaction.</p>
                 </div>
             @else
                 <div class="glass-panel" style="padding: 4rem 2rem; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; border: 2px dashed var(--glass-border);">
