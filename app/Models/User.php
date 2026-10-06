@@ -61,6 +61,16 @@ class User extends Authenticatable
         $this->unsetRelation('dashboardUser');
     }
 
+    /**
+     * Discord sign-in means users have no password, but remember-me login
+     * refuses any user whose password isn't a string. An empty string keeps
+     * the recaller cookie valid (it was signed over an empty password too).
+     */
+    public function getAuthPassword()
+    {
+        return '';
+    }
+
     public function canWrite(): bool
     {
         if (empty($this->roles)) {
