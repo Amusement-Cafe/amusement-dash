@@ -1,17 +1,40 @@
 @props(['cards', 'collections' => [], 'userOwned' => [], 'userFavs' => [], 'userWishlists' => [], 'cardAuctions' => []])
 
 @php
+    // meta.contributor researched the source, meta.userID created the card.
     $contributorIds = [];
+    $creatorIds = [];
     foreach ($cards as $card) {
         $meta = (array) ($card->meta ?? []);
         if (!empty($meta['contributor'])) {
             $contributorIds[] = (string) $meta['contributor'];
         }
+        if (!empty($meta['userID'])) {
+            $creatorIds[] = (string) $meta['userID'];
+        }
     }
     $contributorIds = array_unique($contributorIds);
+    $creatorIds = array_unique($creatorIds);
+    $metaUsers = [];
+    if (!empty($contributorIds) || !empty($creatorIds)) {
+        $metaUsers = \App\Models\User::whereIn('userID', array_values(array_unique(array_merge($contributorIds, $creatorIds))))->get()->keyBy('userID');
+    }
     $contributors = [];
-    if (!empty($contributorIds)) {
-        $contributors = \App\Models\User::whereIn('userID', $contributorIds)->pluck('username', 'userID')->toArray();
+    foreach ($contributorIds as $id) {
+        if (isset($metaUsers[$id])) {
+            $contributors[$id] = $metaUsers[$id]->username;
+        }
+    }
+    // Cards are made by a handful of people, so this is only a few avatar lookups per page.
+    $creators = [];
+    foreach ($creatorIds as $id) {
+        $creatorUser = $metaUsers[$id] ?? null;
+        $creators[$id] = [
+            'id' => $id,
+            'name' => $creatorUser?->username ?: $id,
+            'avatar' => $creatorUser ? $creatorUser->avatarUrl() : \App\Models\User::defaultAvatarUrl($id),
+            'defaultAvatar' => \App\Models\User::defaultAvatarUrl($id),
+        ];
     }
 @endphp
 <div x-data="{ 
@@ -75,7 +98,8 @@
                     'wishlisted' => $wishlisted,
                     'auctionPrice' => isset($cardAuctions[$card->cardID]) ? $cardAuctions[$card->cardID]->price : null,
                     'meta' => $card->meta ?? null,
-                    'contributorName' => !empty(((array)($card->meta ?? []))['contributor']) ? ($contributors[(string)(((array)($card->meta ?? []))['contributor'])] ?? null) : null
+                    'contributorName' => !empty(((array)($card->meta ?? []))['contributor']) ? ($contributors[(string)(((array)($card->meta ?? []))['contributor'])] ?? null) : null,
+                    'creator' => !empty(((array)($card->meta ?? []))['userID']) ? ($creators[(string)(((array)($card->meta ?? []))['userID'])] ?? null) : null
                 ];
             @endphp
             <div wire:key="card-{{ $card->cardID }}"
@@ -442,7 +466,7 @@
                                 <template x-for="(value, key) in selectedCard.meta" :key="key">
                                     <template x-if="value !== null && value !== undefined && value !== ''">
                                         <div class="glass-panel" style="padding: 0.5rem; border: 1px dashed var(--glass-border); border-radius: 8px;">
-                                            <p style="color: var(--text-secondary); font-size: 0.8rem; margin: 0; text-transform: capitalize;" x-text="key.replace(/([A-Z])/g, ' $1').trim()"></p>
+                                            <p style="color: var(--text-secondary); font-size: 0.8rem; margin: 0; text-transform: capitalize;" x-text="key === 'userID' ? 'Card Creator' : key.replace(/([a-z])([A-Z])/g, '$1 $2')"></p>
                                             
                                             <template x-if="key === 'contributor'">
                                                 <p style="font-size: 0.95rem; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -452,14 +476,23 @@
                                                 </p>
                                             </template>
                                             
-                                            <template x-if="key !== 'contributor' && typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://'))">
+                                            <template x-if="key === 'userID'">
+                                                <p style="font-size: 0.95rem; font-weight: 600; margin: 0; min-width: 0;">
+                                                    <a :href="'{{ route('profile.show') }}?id=' + value" style="color: var(--accent-solid); text-decoration: none; display: flex; align-items: center; gap: 0.4rem; min-width: 0;">
+                                                        <img :src="selectedCard.creator?.avatar ?? selectedCard.creator?.defaultAvatar" x-on:error.once="$el.src = selectedCard.creator?.defaultAvatar" alt="" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover; flex-shrink: 0;">
+                                                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" x-text="selectedCard.creator?.name ?? value" :title="selectedCard.creator?.name ?? value"></span>
+                                                    </a>
+                                                </p>
+                                            </template>
+
+                                            <template x-if="key !== 'contributor' && key !== 'userID' && typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://'))">
                                                 <p style="font-size: 0.95rem; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                                     <a :href="value" target="_blank" style="color: var(--accent-solid); text-decoration: none; display: flex; align-items: center; gap: 0.2rem;">
                                                         Link <i class="ph-bold ph-arrow-square-out" style="font-size: 0.9em;"></i>
                                                     </a>
                                                 </p>
                                             </template>
-                                            <template x-if="key !== 'contributor' && !(typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://')))">
+                                            <template x-if="key !== 'contributor' && key !== 'userID' && !(typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://')))">
                                                 <p style="font-size: 0.95rem; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" x-text="value" :title="value"></p>
                                             </template>
                                         </div>
