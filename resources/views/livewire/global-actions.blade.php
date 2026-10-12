@@ -49,6 +49,8 @@ new class extends Component {
                 $message = $data['fav'] ? 'Card added to favorites!' : 'Card removed from favorites.';
                 $this->dispatch('notify', message: $message);
                 $this->dispatch('card-updated', cardId: $cardId, type: 'fav', value: $data['fav']);
+            } else {
+                $this->dispatch('notify', message: \App\Support\ApiError::message($response, 'Could not update your favorites.'), type: 'error');
             }
         }
     }
@@ -66,23 +68,21 @@ new class extends Component {
                 ->where('cardID', (string)$cardId)
                 ->first();
             
-            if ($wishlist) {
-                \Illuminate\Support\Facades\Http::withHeaders([
-                    'Authorization' => config('services.amuse.api_key')
-                ])->timeout(5)->delete(config('services.amuse.api_root') . '/user/wishlist?user=' . $user->userID, [
-                    'cardID' => (string)$cardId
-                ]);
-                $this->dispatch('notify', message: 'Card removed from wishlist.');
-                $this->dispatch('card-updated', cardId: $cardId, type: 'wishlist', value: false);
-            } else {
-                \Illuminate\Support\Facades\Http::withHeaders([
-                    'Authorization' => config('services.amuse.api_key')
-                ])->timeout(5)->post(config('services.amuse.api_root') . '/user/wishlist?user=' . $user->userID, [
-                    'cardID' => (string)$cardId
-                ]);
-                $this->dispatch('notify', message: 'Card added to wishlist!');
-                $this->dispatch('card-updated', cardId: $cardId, type: 'wishlist', value: true);
+            $request = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => config('services.amuse.api_key')
+            ])->timeout(5);
+            $url = config('services.amuse.api_root') . '/user/wishlist?user=' . $user->userID;
+            $body = ['cardID' => (string)$cardId];
+
+            $response = $wishlist ? $request->delete($url, $body) : $request->post($url, $body);
+
+            if (!$response->successful()) {
+                $this->dispatch('notify', message: \App\Support\ApiError::message($response, 'Could not update your wishlist.'), type: 'error');
+                return;
             }
+
+            $this->dispatch('notify', message: $wishlist ? 'Card removed from wishlist.' : 'Card added to wishlist!');
+            $this->dispatch('card-updated', cardId: $cardId, type: 'wishlist', value: !$wishlist);
         }
     }
 }; ?>

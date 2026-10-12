@@ -43,18 +43,33 @@ new #[Layout('layouts.app')] #[Title('Heroes')] class extends Component {
     }
 
     public function setAsMyHero($id) {
-        if (!$id) return;
-        
         $user = Auth::user();
-        if ($user) {
-            \Illuminate\Support\Facades\Http::withHeaders([
-                'Authorization' => config('services.amuse.api_key')
-            ])->timeout(5)->patch(config('services.amuse.api_root') . '/user/hero?user=' . $user->userID, [
-                'heroID' => $id
-            ]);
-            
-            $this->dispatch('notify', message: 'Hero assigned successfully!');
+        if (!$user || !$id) return;
+
+        if (!$user->canWrite()) {
+            $this->dispatch('notify', message: 'You need AmuPlus to perform this action.', type: 'error');
+            return;
         }
+
+        // The bot stores whatever heroID it is given, so only accepted heroes get through.
+        $hero = Hero::where('heroID', (string) $id)->where('accepted', true)->first();
+        if (!$hero) {
+            $this->dispatch('notify', message: 'That hero is not available.', type: 'error');
+            return;
+        }
+
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => config('services.amuse.api_key')
+        ])->timeout(5)->patch(config('services.amuse.api_root') . '/user/hero?user=' . $user->userID, [
+            'heroID' => $hero->heroID
+        ]);
+
+        if (!$response->successful()) {
+            $this->dispatch('notify', message: \App\Support\ApiError::message($response, 'Could not set your hero.'), type: 'error');
+            return;
+        }
+
+        $this->dispatch('notify', message: 'Hero assigned successfully!');
     }
 };
 ?>
@@ -228,11 +243,19 @@ new #[Layout('layouts.app')] #[Title('Heroes')] class extends Component {
                                 <i class="ph-fill ph-check-circle" style="font-size: 1.5rem;"></i> This is your active hero
                             </div>
                         </template>
+                        @if(auth()->user()?->canWrite())
                         <template x-if="!selectedHero?.isMyHero">
-                            <button @click="$wire.setAsMyHero(selectedHero.heroID); selectedHero.isMyHero = true; showModal = false;" style="width: 100%; background: linear-gradient(135deg, #ec4899, #8b5cf6); color: white; border: none; padding: 1.2rem; border-radius: 8px; font-weight: bold; font-size: 1.2rem; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.8rem; font-family: inherit;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 25px rgba(236,72,153,0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                            <button @click="$wire.setAsMyHero(selectedHero.heroID); showModal = false;" style="width: 100%; background: linear-gradient(135deg, #ec4899, #8b5cf6); color: white; border: none; padding: 1.2rem; border-radius: 8px; font-weight: bold; font-size: 1.2rem; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.8rem; font-family: inherit;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 25px rgba(236,72,153,0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
                                 <i class="ph-bold ph-star" style="font-size: 1.5rem;"></i> Set as my hero
                             </button>
                         </template>
+                        @else
+                        <template x-if="!selectedHero?.isMyHero">
+                            <a href="https://ko-fi.com/amusement" target="_blank" class="btn-amuplus" style="width: 100%; padding: 1.2rem; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 0.8rem; font-size: 1.1rem;">
+                                <i class="ph-bold ph-coffee"></i> Get AmuPlus to choose a hero
+                            </a>
+                        </template>
+                        @endif
                     </div>
                 </div>
             </div>
